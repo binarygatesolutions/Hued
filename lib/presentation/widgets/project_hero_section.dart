@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../core/utils/animations.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/entities.dart';

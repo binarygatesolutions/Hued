@@ -26,19 +26,14 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app needs access to your photo library to select images.</string>
-
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>This app needs permission to save images to your photo library.</string>
-
-	<key>NSCameraUsageDescription</key>
-	<string>This app needs access to your camera to take photos.</string>
-
 	<key>NSAppleMusicUsageDescription</key>
 	<string>This app needs access to your media library to select audio files.</string>
-
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs access to your camera to take photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app needs permission to save images to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to your photo library to select images.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -62,6 +57,12 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

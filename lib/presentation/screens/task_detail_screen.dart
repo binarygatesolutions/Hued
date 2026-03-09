@@ -31,6 +31,7 @@ import '../blocs/activity_event.dart';
 import '../blocs/activity_state.dart';
 import '../widgets/shared_timeline_widget.dart';
 import '../blocs/sync_bloc.dart';
+import '../blocs/sync_event.dart';
 import '../blocs/sync_state.dart';
 import '../widgets/project_detail_background.dart';
 
@@ -62,6 +63,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       context.read<ActivityBloc>().add(
         MonitorActivities(projectId: widget.projectId, taskId: widget.taskId),
       );
+      context.read<SyncBloc>().add(
+        MonitorTask(widget.projectId, widget.taskId),
+      );
     });
   }
 
@@ -73,7 +77,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Future<void> _onRefresh() async {
-    await Future.delayed(const Duration(milliseconds: 800));
+    // Re-trigger monitoring and sync events to ensure latest data
+    context.read<ActivityBloc>().add(
+      MonitorActivities(projectId: widget.projectId, taskId: widget.taskId),
+    );
+    context.read<SyncBloc>().add(MonitorTask(widget.projectId, widget.taskId));
+    // Refresh users as well
+    setState(() {});
+
+    await Future.delayed(const Duration(milliseconds: 1000));
     _refreshController.refreshCompleted();
   }
 
@@ -167,10 +179,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               final pendingRequests =
                                   requestsSnapshot.data ?? [];
 
-                              return FutureBuilder<List<AttachmentEntity>>(
-                                future: context
+                              return StreamBuilder<List<AttachmentEntity>>(
+                                stream: context
                                     .read<ProjectRepository>()
-                                    .getTaskAttachments(
+                                    .getTaskAttachmentsStream(
                                       widget.projectId,
                                       widget.taskId,
                                     ),

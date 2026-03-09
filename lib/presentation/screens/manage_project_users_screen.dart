@@ -46,6 +46,10 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
   void initState() {
     super.initState();
     _supervisorIds = List.from(widget.project.supervisorIds);
+    // Ensure creator is in supervisors list
+    if (!_supervisorIds.contains(widget.project.creatorId)) {
+      _supervisorIds.add(widget.project.creatorId);
+    }
     _managerIds = List.from(widget.project.managerIds);
     _clientIds = List.from(widget.project.clientIds);
     _workerIds = List.from(widget.project.workerIds);
@@ -95,26 +99,15 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
     }
   }
 
-  void _saveChanges() {
-    if (_workerIds.isNotEmpty) {
-      for (final workerId in _workerIds) {
-        final pmId = _workerManagerMap[workerId];
-        if (pmId == null || !_managerIds.contains(pmId)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(LangKeys.assignPmToWorker.tr()),
-              backgroundColor: context.error,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-          return;
-        }
-      }
+  void _saveChanges(UserEntity currentUser) {
+    if (currentUser.role == UserRole.projectManager) {
+      // PM only manages their own workers
+      // We don't touch supervisors, managers, or clients
+    } else {
+      // Admin/Supervisor manages supervisors, managers, and clients
+      // Worker mapping cleanup for removed managers
+      _workerManagerMap.removeWhere((wId, pmId) => !_managerIds.contains(pmId));
     }
-
-    _workerManagerMap.removeWhere(
-      (wId, pmId) => !_workerIds.contains(wId) || !_managerIds.contains(pmId),
-    );
 
     setState(() => _isSaving = true);
     context.read<ProjectBloc>().add(
@@ -169,9 +162,14 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
           }
 
           final user = authState.user;
-          // Admins and supervisors manage the project team
+          // Admins, supervisors, and assigned PMs manage the project team (differently)
+          final isAssignedPm =
+              user.role == UserRole.projectManager &&
+              widget.project.managerIds.contains(user.id);
           final canManage =
-              user.role == UserRole.admin || user.role == UserRole.supervisor;
+              user.role == UserRole.admin ||
+              user.role == UserRole.supervisor ||
+              isAssignedPm;
 
           return Scaffold(
             extendBodyBehindAppBar: true,
@@ -181,7 +179,7 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
                 _buildBackground(context),
                 SafeArea(
                   child: canManage
-                      ? _buildManagementContent(context)
+                      ? _buildManagementContent(context, user)
                       : _buildRestrictedAccess(context),
                 ),
                 if (_isSaving)
@@ -298,7 +296,9 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
     );
   }
 
-  Widget _buildManagementContent(BuildContext context) {
+  Widget _buildManagementContent(BuildContext context, UserEntity user) {
+    final isPm = user.role == UserRole.projectManager;
+
     return Stack(
       children: [
         CustomScrollView(
@@ -312,71 +312,77 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
                   children: [
                     _buildHeroHeader(context).animateEntrance(),
                     const SizedBox(height: 32),
-                    _buildSectionHeader(
-                      LangKeys.managementAndOversight.tr(),
-                      Ionicons.shield_checkmark_outline,
-                    ).animateEntrance(delayMs: 200),
-                    const SizedBox(height: 20),
-                    _buildPickerWithLabel(
-                      label: LangKeys.supervisors.tr(),
-                      ids: _supervisorIds,
-                      role: UserRole.supervisor,
-                      onChanged: (ids) => setState(() {
-                        _supervisorIds = ids;
-                        _hasChanges = true;
-                      }),
-                    ).animateEntrance(delayMs: 300),
-                    const SizedBox(height: 16),
-                    _buildPickerWithLabel(
-                      label: LangKeys.projectManagers.tr(),
-                      ids: _managerIds,
-                      role: UserRole.projectManager,
-                      onChanged: (ids) => setState(() {
-                        _managerIds = ids;
-                        _hasChanges = true;
-                      }),
-                    ).animateEntrance(delayMs: 400),
-                    const SizedBox(height: 40),
-                    _buildSectionHeader(
-                      LangKeys.stakeholders.tr(),
-                      Ionicons.people_outline,
-                    ).animateEntrance(delayMs: 500),
-                    const SizedBox(height: 20),
-                    _buildPickerWithLabel(
-                      label: LangKeys.clientsExternal.tr(),
-                      ids: _clientIds,
-                      role: UserRole.client,
-                      onChanged: (ids) => setState(() {
-                        _clientIds = ids;
-                        _hasChanges = true;
-                      }),
-                    ).animateEntrance(delayMs: 600),
-
-                    if (_workerIds.isNotEmpty && _managerIds.isNotEmpty) ...[
+                    if (!isPm) ...[
+                      _buildSectionHeader(
+                        LangKeys.managementAndOversight.tr(),
+                        Ionicons.shield_checkmark_outline,
+                      ).animateEntrance(delayMs: 200),
+                      const SizedBox(height: 20),
+                      _buildFixedSupervisorCard(
+                        context,
+                      ).animateEntrance(delayMs: 300),
+                      const SizedBox(height: 16),
+                      _buildPickerWithLabel(
+                        label: LangKeys.projectManagers.tr(),
+                        ids: _managerIds,
+                        role: UserRole.projectManager,
+                        onChanged: (ids) => setState(() {
+                          _managerIds = ids;
+                          _hasChanges = true;
+                        }),
+                      ).animateEntrance(delayMs: 400),
                       const SizedBox(height: 40),
+                      _buildSectionHeader(
+                        LangKeys.stakeholders.tr(),
+                        Ionicons.people_outline,
+                      ).animateEntrance(delayMs: 500),
+                      const SizedBox(height: 20),
+                      _buildPickerWithLabel(
+                        label: LangKeys.clientsExternal.tr(),
+                        ids: _clientIds,
+                        role: UserRole.client,
+                        onChanged: (ids) => setState(() {
+                          _clientIds = ids;
+                          _hasChanges = true;
+                        }),
+                      ).animateEntrance(delayMs: 600),
+                    ] else ...[
                       _buildSectionHeader(
                         LangKeys.workers.tr(),
                         Ionicons.construct_outline,
                       ).animateEntrance(delayMs: 700),
                       const SizedBox(height: 20),
-                      _buildPickerWithLabel(
-                        label: LangKeys.workers.tr(),
-                        ids: _workerIds,
-                        role: UserRole.worker,
-                        onChanged: (ids) => setState(() {
-                          _workerIds = ids;
-                          _hasChanges = true;
-                        }),
+                      Builder(
+                        builder: (context) {
+                          final myWorkers = _workerIds
+                              .where((id) => _workerManagerMap[id] == user.id)
+                              .toList();
+                          return _buildPickerWithLabel(
+                            label: LangKeys.workers.tr(),
+                            ids: myWorkers,
+                            role: UserRole.worker,
+                            onChanged: (ids) => setState(() {
+                              // Sync workerIds: remove old ones managed by this PM, add new ones
+                              final oldMyWorkers = _workerIds
+                                  .where(
+                                    (id) => _workerManagerMap[id] == user.id,
+                                  )
+                                  .toList();
+                              for (var id in oldMyWorkers) {
+                                _workerIds.remove(id);
+                                _workerManagerMap.remove(id);
+                              }
+                              for (var id in ids) {
+                                if (!_workerIds.contains(id)) {
+                                  _workerIds.add(id);
+                                }
+                                _workerManagerMap[id] = user.id;
+                              }
+                              _hasChanges = true;
+                            }),
+                          );
+                        },
                       ).animateEntrance(delayMs: 800),
-                      const SizedBox(height: 32),
-                      _buildSectionHeader(
-                        LangKeys.workerAssignments.tr(),
-                        Ionicons.git_branch_outline,
-                      ).animateEntrance(delayMs: 900),
-                      const SizedBox(height: 16),
-                      _buildWorkerManagerMapping().animateEntrance(
-                        delayMs: 1000,
-                      ),
                     ],
                   ],
                 ),
@@ -389,7 +395,7 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
             bottom: 32,
             left: 24,
             right: 24,
-            child: _buildSaveButton(context),
+            child: _buildSaveButton(context, user),
           ),
       ],
     );
@@ -542,55 +548,55 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
     );
   }
 
-  Widget _buildSaveButton(BuildContext context) {
+  Widget _buildSaveButton(BuildContext context, UserEntity user) {
     return SharedButton(
-      onPressed: _saveChanges,
+      onPressed: () => _saveChanges(user),
       text: LangKeys.updateTeam.tr(),
     );
   }
 
-  Widget _buildWorkerManagerMapping() {
-    final availableManagers = initialUsers
-        .where((u) => _managerIds.contains(u.id))
-        .toList();
+  Widget _buildFixedSupervisorCard(BuildContext context) {
+    UserEntity? creator;
+    try {
+      creator = initialUsers.firstWhere(
+        (u) => u.id == widget.project.creatorId,
+      );
+    } catch (_) {
+      creator = UserEntity(
+        id: widget.project.creatorId,
+        name: LangKeys.unknownWorker.tr(),
+        email: '',
+        role: UserRole.supervisor,
+        profile: '',
+      );
+    }
 
-    return Column(
-      children: _workerIds.map((workerId) {
-        final worker = initialUsers.firstWhere(
-          (u) => u.id == workerId,
-          orElse: () => UserEntity(
-            id: workerId,
-            name: LangKeys.unknownWorker.tr(),
-            email: '',
-            role: UserRole.worker,
-            profile: '',
-          ),
-        );
-
-        final assignedManagerId = _workerManagerMap[workerId];
-        final isValidManager =
-            assignedManagerId != null &&
-            _managerIds.contains(assignedManagerId);
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: context.surface.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isValidManager
-                  ? context.primary.withOpacity(0.1)
-                  : context.error.withOpacity(0.3),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surface.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.primary.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            LangKeys.supervisors.tr(),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: context.onSurface.withOpacity(0.6),
             ),
           ),
-          child: Row(
+          const SizedBox(height: 12),
+          Row(
             children: [
               SharedProfileAvatar(
-                name: worker.name,
-                radius: 16,
+                name: creator.name,
+                radius: 20,
                 showBorder: false,
-                imageUrl: worker.profile,
+                imageUrl: creator.profile,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -598,65 +604,44 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      worker.name,
+                      creator.name,
                       style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
                       ),
                     ),
                     Text(
-                      LangKeys.getLocalizedRole(worker.role),
+                      LangKeys.getLocalizedRole(creator.role),
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         color: context.onSurface.withOpacity(0.4),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Icon(
-                Ionicons.arrow_forward_outline,
-                size: 14,
-                color: context.onSurface.withOpacity(0.3),
-              ),
-              const SizedBox(width: 8),
-              DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: isValidManager ? assignedManagerId : null,
-                  hint: Text(
-                    LangKeys.selectPm.tr(),
-                    style: TextStyle(fontSize: 12, color: context.error),
-                  ),
-                  icon: Icon(
-                    Ionicons.chevron_down,
-                    size: 16,
-                    color: context.onSurface.withOpacity(0.5),
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: context.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  LangKeys.owner.tr(),
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
                     color: context.primary,
                   ),
-                  dropdownColor: context.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  items: availableManagers.map((pm) {
-                    return DropdownMenuItem(value: pm.id, child: Text(pm.name));
-                  }).toList(),
-                  onChanged: (newPmId) {
-                    if (newPmId != null) {
-                      setState(() {
-                        _workerManagerMap[workerId] = newPmId;
-                        _hasChanges = true;
-                      });
-                    }
-                  },
                 ),
               ),
             ],
           ),
-        );
-      }).toList(),
+        ],
+      ),
     );
   }
 }

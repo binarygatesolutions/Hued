@@ -19,12 +19,14 @@ class ApprovalRequestCard extends StatelessWidget {
   final RequestEntity request;
   final bool isCompact;
   final double? width;
+  final EdgeInsets? margin;
 
   const ApprovalRequestCard({
     super.key,
     required this.request,
     this.isCompact = false,
     this.width = 320,
+    this.margin,
   });
 
   @override
@@ -47,9 +49,11 @@ class ApprovalRequestCard extends StatelessWidget {
 
         return Container(
           width: isCompact ? double.infinity : width,
-          margin: isCompact
-              ? const EdgeInsets.only(bottom: 16)
-              : const EdgeInsets.only(right: 16),
+          margin:
+              margin ??
+              (isCompact
+                  ? const EdgeInsets.only(bottom: 16)
+                  : const EdgeInsets.only(right: 16)),
 
           child: PremiumCard(
             borderRadius: 24,
@@ -59,15 +63,19 @@ class ApprovalRequestCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Premium Header
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: (canApprove ? Colors.amber : context.primary)
-                            .withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(14),
+                            .withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: (canApprove ? Colors.amber : context.primary)
+                              .withOpacity(0.15),
+                        ),
                       ),
                       child: Icon(
                         request.type == RequestType.taskStatus
@@ -75,144 +83,103 @@ class ApprovalRequestCard extends StatelessWidget {
                             : request.type == RequestType.taskDeadline
                             ? Ionicons.calendar_outline
                             : Ionicons.rocket_outline,
-                        size: 18,
+                        size: 20,
                         color: canApprove ? Colors.amber[800] : context.primary,
                       ),
                     ),
-                    if (canApprove)
-                      _buildActionRequiredBadge(context)
-                    else
-                      _buildWaitingBadge(context),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            projectName.toUpperCase(),
+                            style: TextStyle(
+                              color: context.onSurface.withOpacity(0.4),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            taskName ?? LangKeys.projectStatus.tr(),
+                            style: TextStyle(
+                              color: context.onSurface,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
 
-                const SizedBox(height: 10),
+                const SizedBox(height: 24),
 
+                // Transition Status Area
                 _buildStatusTransition(context, details),
 
-                const SizedBox(height: 10),
+                const SizedBox(height: 24),
 
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      projectName,
-                      style: TextStyle(
-                        color: context.onSurface.withOpacity(0.5),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
+                // Footer Area: Progress & Initiator
+                Container(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                  decoration: BoxDecoration(
+                    color: context.onSurface.withOpacity(0.03),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      SharedProfileAvatar(
+                        imageUrl: initiator?.profile,
+                        name: initiator?.name ?? '',
+                        radius: 12,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (taskName != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        taskName,
-                        style: TextStyle(
-                          color: context.onSurface,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              initiator?.name ?? request.initiatorId,
+                              style: TextStyle(
+                                color: context.onSurface,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              DateFormat(
+                                'h:mm a',
+                                context.locale.toString(),
+                              ).format(request.createdAt),
+                              style: TextStyle(
+                                color: context.onSurface.withOpacity(0.4),
+                                fontSize: 9,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
+                      _buildSmallProgressDots(context),
                     ],
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                _buildSmallProgressDots(context),
-
-                const SizedBox(height: 24),
-
-                // Bottom Row: Initiator & Time
-                Row(
-                  children: [
-                    SharedProfileAvatar(
-                      imageUrl: initiator?.profile,
-                      name: initiator?.name ?? '',
-                      radius: 14,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        initiator?.name ?? request.initiatorId,
-                        style: TextStyle(
-                          color: context.onSurface,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      DateFormat(
-                        'h:mm a',
-                        context.locale.toString(),
-                      ).format(request.createdAt),
-                      style: TextStyle(
-                        color: context.onSurface.withOpacity(0.4),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildActionRequiredBadge(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.amber[700],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Ionicons.alert_circle, size: 12, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            LangKeys.yourApprovalRequired.tr().toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 9,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWaitingBadge(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: context.onSurface.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: context.onSurface.withOpacity(0.1)),
-      ),
-      child: Text(
-        LangKeys.waitingFor.tr(args: [request.currentStep.name.toUpperCase()]),
-        style: TextStyle(
-          color: context.onSurface.withOpacity(0.6),
-          fontSize: 9,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.5,
-        ),
-      ),
     );
   }
 
@@ -227,98 +194,74 @@ class ApprovalRequestCard extends StatelessWidget {
       fromValue = task.status.name.tr();
     } else if (request.type == RequestType.taskDeadline && task != null) {
       fromValue = DateFormat(
-        'MMM dd, yyyy',
+        'MMM dd',
         context.locale.toString(),
       ).format(task.deadline);
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      LangKeys.change.tr().toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        color: context.onSurface.withOpacity(0.3),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    _buildStatusChip(context, fromValue, false),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 12, right: 12, top: 15),
-                child: Icon(
-                  Icons.arrow_forward,
-                  size: 18,
-                  color: context.onSurface.withOpacity(0.2),
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      LangKeys.to.tr().toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        color: context.primary.withOpacity(0.5),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    _buildStatusChip(
-                      context,
-                      request.type == RequestType.taskDeadline
-                          ? DateFormat(
-                              'MMM dd, yyyy',
-                              context.locale.toString(),
-                            ).format(DateTime.parse(request.targetStatus))
-                          : request.targetStatus.tr(),
-                      true,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    final String toValue = request.type == RequestType.taskDeadline
+        ? DateFormat(
+            'MMM dd',
+            context.locale.toString(),
+          ).format(DateTime.parse(request.targetStatus))
+        : request.targetStatus.tr();
+
+    return Row(
+      children: [
+        Expanded(child: _buildTransitionChip(context, fromValue, false)),
+        const SizedBox(width: 8),
+        Container(
+          width: 32,
+          height: 1,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                context.onSurface.withOpacity(0.05),
+                context.primary.withOpacity(0.2),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+        Icon(
+          Ionicons.chevron_forward,
+          size: 14,
+          color: context.primary.withOpacity(0.3),
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: _buildTransitionChip(context, toValue, true)),
+      ],
     );
   }
 
-  Widget _buildStatusChip(BuildContext context, String text, bool isHighlight) {
+  Widget _buildTransitionChip(
+    BuildContext context,
+    String text,
+    bool isHighlight,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       decoration: BoxDecoration(
         color: isHighlight
-            ? context.primary.withOpacity(0.1)
+            ? context.primary.withOpacity(0.08)
             : context.onSurface.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isHighlight
-              ? context.primary.withOpacity(0.2)
-              : context.onSurface.withOpacity(0.08),
+              ? context.primary.withOpacity(0.12)
+              : context.onSurface.withOpacity(0.06),
         ),
       ),
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          color: isHighlight
-              ? context.primary
-              : context.onSurface.withOpacity(0.7),
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
+      child: Center(
+        child: Text(
+          text.toUpperCase(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: isHighlight ? context.primary : context.onSurface,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.2,
+          ),
         ),
       ),
     );
@@ -341,6 +284,7 @@ class ApprovalRequestCard extends StatelessWidget {
     final currentStepIndex = relevantSteps.indexOf(request.currentStep);
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: List.generate(relevantSteps.length, (index) {
         final bool isDone =
             index < currentStepIndex ||
@@ -350,19 +294,26 @@ class ApprovalRequestCard extends StatelessWidget {
             index == currentStepIndex &&
             request.status == RequestStatus.pending;
 
-        return Padding(
-          padding: const EdgeInsets.only(right: 6),
-          child: Container(
-            width: isCurrent ? 24 : 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: isDone
-                  ? context.primary
-                  : isCurrent
-                  ? Colors.amber
-                  : context.onSurface.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(4),
-            ),
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.only(left: 4),
+          width: isCurrent ? 14 : 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: isDone
+                ? context.primary
+                : isCurrent
+                ? Colors.amber
+                : context.onSurface.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(3),
+            boxShadow: isCurrent
+                ? [
+                    BoxShadow(
+                      color: Colors.amber.withOpacity(0.4),
+                      blurRadius: 4,
+                    ),
+                  ]
+                : null,
           ),
         );
       }),

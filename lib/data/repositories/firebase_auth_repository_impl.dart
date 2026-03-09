@@ -32,9 +32,13 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
         email: email.trim(),
         password: password.trim(),
       );
-      await _firestore.collection('users').doc(credential.user!.uid).update({
-        'fcmToken': await FirebaseMessaging.instance.getToken(),
-      });
+      try {
+        await _firestore.collection('users').doc(credential.user!.uid).update({
+          'fcmToken': await FirebaseMessaging.instance.getToken(),
+        });
+      } catch (e) {
+        debugPrint('Failed to update FCM token during login: $e');
+      }
       return await _getUserWithRole(credential.user!);
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -60,6 +64,13 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
 
       await credential.user!.updateDisplayName(name);
 
+      String? fcmToken;
+      try {
+        fcmToken = await FirebaseMessaging.instance.getToken();
+      } catch (e) {
+        debugPrint('Failed to get FCM token during registration: $e');
+      }
+
       await _firestore.collection('users').doc(credential.user!.uid).set({
         'name': name,
         'email': email.trim(),
@@ -67,7 +78,7 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
         'specialtyId': specialtyId,
         'specialtyName': specialtyName,
         'createdAt': FieldValue.serverTimestamp(),
-        'fcmToken': await FirebaseMessaging.instance.getToken(),
+        'fcmToken': fcmToken,
       });
 
       return UserEntity(

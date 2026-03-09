@@ -49,7 +49,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
         title: event.title,
         description: event.description,
         creatorId: event.creatorId,
-        supervisorIds: const [],
+        supervisorIds: [event.creatorId],
         managerIds: const [],
         clientIds: const [],
         workerIds: const [],

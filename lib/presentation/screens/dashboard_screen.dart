@@ -155,9 +155,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             return Scaffold(
               backgroundColor: context.background,
-              floatingActionButton:
-                  (user.role == UserRole.admin ||
-                      user.role == UserRole.supervisor)
+              floatingActionButton: user.role == UserRole.supervisor
                   ? FloatingActionButton.extended(
                       onPressed: () {
                         HapticsService.light();
@@ -192,41 +190,92 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(color: context.background),
       child: Stack(
         children: [
-          // Mesh Gradient Blobs
-          if (isDark)
+          // Multi-layered Mesh Gradient Blobs
+          if (isDark) ...[
             Positioned(
-              top: -150,
-              right: -100,
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  color: context.primary.withOpacity(isDark ? 0.08 : 0.04),
-                  shape: BoxShape.circle,
-                ),
-              ).animateFade(),
+              top: -100,
+              right: -50,
+              child:
+                  Container(
+                        width: 350,
+                        height: 350,
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            colors: [
+                              context.primary.withOpacity(0.12),
+                              context.primary.withOpacity(0),
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                      )
+                      .animate()
+                      .fadeIn(duration: 1200.ms)
+                      .scale(
+                        begin: const Offset(0.8, 0.8),
+                        curve: Curves.easeOutCubic,
+                      ),
             ),
-          if (isDark)
             Positioned(
-              top: 200,
-              left: -150,
-              child: Container(
-                width: 500,
-                height: 500,
-                decoration: BoxDecoration(
-                  color: context.purple.withOpacity(isDark ? 0.05 : 0.03),
-                  shape: BoxShape.circle,
-                ),
-              ).animateFade(),
+              top: 150,
+              left: -100,
+              child:
+                  Container(
+                        width: 450,
+                        height: 450,
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            colors: [
+                              context.purple.withOpacity(0.08),
+                              context.purple.withOpacity(0),
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                      )
+                      .animate()
+                      .fadeIn(duration: 1500.ms, delay: 200.ms)
+                      .scale(
+                        begin: const Offset(0.7, 0.7),
+                        curve: Curves.easeOutCubic,
+                      ),
             ),
-          // Blur layer for mesh blobs
-          if (isDark)
+            Positioned(
+              bottom: 100,
+              right: -150,
+              child:
+                  Container(
+                        width: 400,
+                        height: 400,
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            colors: [
+                              context.primary.withOpacity(0.06),
+                              context.primary.withOpacity(0),
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                      )
+                      .animate(
+                        onPlay: (controller) =>
+                            controller.repeat(reverse: true),
+                      )
+                      .moveY(
+                        begin: 0,
+                        end: 30,
+                        duration: 4.seconds,
+                        curve: Curves.easeInOut,
+                      ),
+            ),
+            // Glassmorphism Overlay
             Positioned.fill(
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
                 child: Container(color: Colors.transparent),
               ),
             ),
+          ],
 
           // Main Content
           Positioned.fill(
@@ -382,41 +431,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildPersonalizedHeader(BuildContext context, UserEntity user) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  LangKeys.hello.tr(args: [user.name.split(' ').first]),
-                  style: context.textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      LangKeys.hello.tr(args: [user.name.split(' ').first]),
+                      style: context.textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1,
+                        fontSize: 32,
+                      ),
+                    ).animate().fadeIn(duration: 600.ms).slideX(begin: -0.1),
+                    const SizedBox(height: 6),
+                    Text(
+                          user.role == UserRole.admin
+                              ? LangKeys.managingOrganizationalProjects.tr()
+                              : LangKeys.exploreProjectsTasks.tr(),
+                          style: TextStyle(
+                            color: context.onSurface.withOpacity(0.45),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: -0.2,
+                          ),
+                        )
+                        .animate()
+                        .fadeIn(duration: 600.ms, delay: 100.ms)
+                        .slideX(begin: -0.1),
+                  ],
+                ),
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: () => context.goNamed(AppRouter.settings),
+                child: Hero(
+                  tag: 'user_avatar',
+                  child: SharedProfileAvatar(
+                    name: user.name,
+                    radius: 28,
+                    imageUrl: user.profile,
+                    showBorder: true,
                   ),
-                ).animateEntrance(),
-                const SizedBox(height: 8),
-                Text(
-                  user.role == UserRole.admin
-                      ? LangKeys.managingOrganizationalProjects.tr()
-                      : LangKeys.exploreProjectsTasks.tr(),
-                  style: TextStyle(
-                    color: context.onSurface.withOpacity(0.5),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ).animateEntrance(delayMs: 100),
-              ],
-            ),
-          ),
-          InkWell(
-            borderRadius: BorderRadius.circular(24),
-            onTap: () => context.goNamed(AppRouter.settings),
-            child: SharedProfileAvatar(
-              name: user.name,
-              radius: 24,
-              imageUrl: user.profile,
-              showBorder: true,
-            ).animateScale(),
+                ),
+              ).animate().fadeIn(duration: 600.ms, delay: 200.ms).scale(),
+            ],
           ),
         ],
       ),
@@ -425,10 +489,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildQuickStats(BuildContext context, ProjectState state) {
     return Container(
-      height: 156,
-      margin: const EdgeInsets.only(bottom: 24),
+      height: 170,
+      margin: const EdgeInsets.only(bottom: 32),
       child: ListView(
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 24),
         children: [
           _buildStatTile(
@@ -471,44 +536,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
     int delayMs = 0,
   }) {
     return SizedBox(
-      width: 156,
-      child: PremiumCard(
-        borderRadius: 28,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 18, color: color),
+          width: 160,
+          child: PremiumCard(
+            borderRadius: 32,
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: color.withOpacity(0.15)),
+                  ),
+                  child: Icon(icon, size: 20, color: color),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: context.onSurface,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 26,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    color: context.onSurface.withOpacity(0.4),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              value,
-              style: TextStyle(
-                color: context.onSurface,
-                fontWeight: FontWeight.w700,
-                fontSize: 22,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: context.onSurface.withOpacity(0.7),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ).animateScale(delayMs: delayMs);
+          ),
+        )
+        .animate()
+        .fadeIn(delay: delayMs.ms)
+        .scale(begin: const Offset(0.9, 0.9), curve: Curves.easeOutBack);
   }
 
   Widget _buildNotificationIcon(BuildContext context, UserEntity user) {
@@ -595,33 +666,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (filteredRequests.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Text(
-            LangKeys.pendingApprovals.tr(),
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: ProjectSectionHeader(
+              title: LangKeys.pendingApprovals.tr(),
+              color: context.primary,
+            ).animateEntrance(delayMs: 500),
+          ),
+          const SizedBox(height: 17),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: filteredRequests.map((request) {
+                return ApprovalRequestCard(
+                  request: request,
+                  margin: EdgeInsets.zero,
+                );
+              }).toList(),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 290,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            itemCount: filteredRequests.length,
-            itemBuilder: (context, index) {
-              final request = filteredRequests[index];
-              return ApprovalRequestCard(request: request);
-            },
-          ),
-        ),
-        const SizedBox(height: 24),
-      ],
+          const SizedBox(height: 24),
+        ],
+      ),
     );
   }
 }

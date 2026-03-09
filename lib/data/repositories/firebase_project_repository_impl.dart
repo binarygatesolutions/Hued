@@ -325,6 +325,24 @@ class FirebaseProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
+  Stream<List<AttachmentEntity>> getTaskAttachmentsStream(
+    String projectId,
+    String taskId,
+  ) {
+    return _attachmentsCollection(
+      projectId,
+      taskId,
+    ).orderBy('createdAt', descending: true).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return AttachmentModel.fromFirestore(
+          doc.data() as Map<String, dynamic>,
+          doc.id,
+        );
+      }).toList();
+    });
+  }
+
+  @override
   Stream<List<ActivityEntity>> getActivitiesStream(
     String projectId,
     String? taskId, {

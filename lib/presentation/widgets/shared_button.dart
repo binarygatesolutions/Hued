@@ -75,10 +75,10 @@ class SharedButton extends StatelessWidget {
                   text,
                   style:
                       textStyle ??
-                      TextStyle(
+                      context.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
                         color: textColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
                       ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

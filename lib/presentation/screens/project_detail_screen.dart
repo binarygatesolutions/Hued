@@ -451,7 +451,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         tasks: tasks,
         users: users,
         requests: requests,
-        shouldPrint: result['shouldPrint'],
+        locale: context.locale,
+        shouldPrint: result['shouldPrint'] ?? false,
       );
     } finally {
       if (mounted) Navigator.pop(context);

@@ -66,6 +66,10 @@ abstract class ProjectRepository {
     String projectId,
     String taskId,
   );
+  Stream<List<AttachmentEntity>> getTaskAttachmentsStream(
+    String projectId,
+    String taskId,
+  );
 
   Stream<List<ActivityEntity>> getActivitiesStream(
     String projectId,

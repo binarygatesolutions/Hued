@@ -44,117 +44,87 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: context.primary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: context.primary.withOpacity(0.12)),
+                ),
+                child: Icon(
+                  Ionicons.people_outline,
+                  color: context.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
               Expanded(
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Ionicons.people_circle_outline,
-                      color: context.onSurface,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        LangKeys.teamManagement.tr().toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.5,
-                          color: context.onSurface,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      LangKeys.teamManagement.tr().toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        color: context.onSurface.withOpacity(0.5),
                       ),
                     ),
-                    if (widget.currentUser.role == UserRole.admin &&
-                        widget.project.creatorId == widget.currentUser.id &&
-                        widget.project.status != ProjectStatus.finished) ...[
-                      const SizedBox(width: 8),
-
-                      InkWell(
-                        onTap: () {
-                          context.push(
-                            '/project/${widget.project.id}/manage-users',
-                            extra: widget.project,
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(100),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: context.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(100),
-                            border: Border.all(
-                              color: context.primary.withOpacity(0.2),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Ionicons.options_outline,
-                                size: 14,
-                                color: context.primary,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                LangKeys.manageTeam.tr(),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: context.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${project.managerIds.length + project.supervisorIds.length + project.workerIds.length + project.clientIds.length} ${LangKeys.users.tr()}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: context.onSurface,
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
-              SizedBox(width: 8),
-              InkWell(
-                onTap: () {
+              if ((widget.project.creatorId == widget.currentUser.id ||
+                      (widget.currentUser.role == UserRole.projectManager &&
+                          widget.project.managerIds.contains(
+                            widget.currentUser.id,
+                          ))) &&
+                  widget.project.status != ProjectStatus.finished)
+                IconButton.filledTonal(
+                  onPressed: () {
+                    context.push(
+                      '/project/${widget.project.id}/manage-users',
+                      extra: widget.project,
+                    );
+                  },
+                  style: IconButton.styleFrom(
+                    backgroundColor: context.primary.withOpacity(0.08),
+                    foregroundColor: context.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: const Icon(Ionicons.settings_outline, size: 20),
+                ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                onPressed: () {
                   setState(() {
                     _isExpanded = !_isExpanded;
                   });
                 },
-                borderRadius: BorderRadius.circular(100),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                style: IconButton.styleFrom(
+                  backgroundColor: context.onSurface.withOpacity(0.04),
+                  foregroundColor: context.onSurface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  decoration: BoxDecoration(
-                    color: context.primary.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _isExpanded ? 'View Less' : 'View All',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: context.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        _isExpanded
-                            ? Ionicons.chevron_up_outline
-                            : Ionicons.chevron_down_outline,
-                        size: 14,
-                        color: context.primary,
-                      ),
-                    ],
-                  ),
+                ),
+                icon: Icon(
+                  _isExpanded
+                      ? Ionicons.chevron_up_outline
+                      : Ionicons.chevron_down_outline,
+                  size: 20,
                 ),
               ),
             ],
@@ -251,26 +221,31 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
           children: [
             if (topMembers.isNotEmpty)
               SizedBox(
-                height: 38,
-                width:
-                    (38 * 0.8) * topMembers.length +
-                    (38 * 0.2), // Overlap logic
+                height: 40,
+                width: (32 * topMembers.length).toDouble() + 8,
                 child: Stack(
                   children: List.generate(topMembers.length, (index) {
                     final userId = topMembers[index];
                     final user = widget.users[userId];
                     return Positioned(
-                      left: index * (38 * 0.7),
+                      left: index * 26,
                       child: Container(
-                        padding: const EdgeInsets.all(2),
+                        padding: const EdgeInsets.all(2.5),
                         decoration: BoxDecoration(
                           color: context.surface,
                           shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: SharedProfileAvatar(
                           name: user?.name ?? LangKeys.unknown.tr(),
                           imageUrl: user?.profile,
-                          radius: 16,
+                          radius: 17,
                           showBorder: false,
                         ),
                       ),
@@ -278,6 +253,24 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                   }),
                 ),
               ),
+            const SizedBox(width: 8),
+            Text(
+              LangKeys.membersTotal.tr(
+                args: [
+                  [
+                    ...project.managerIds,
+                    ...project.supervisorIds,
+                    ...project.workerIds,
+                    ...project.clientIds,
+                  ].length.toString(),
+                ],
+              ),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: context.onSurface.withOpacity(0.4),
+              ),
+            ),
           ],
         ),
       ],
@@ -293,67 +286,87 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
     final pmName = pm?.name ?? LangKeys.unknown.tr();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: BorderRadius.circular(24),
+        color: context.onSurface.withOpacity(0.02),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: context.primary.withOpacity(0.08),
-          width: 1.5,
+          color: context.onSurface.withOpacity(0.05),
+          width: 1,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            onTap: () {
-              if (pm != null) UserProfileSheet.show(context, pm);
-            },
-            child: Row(
-              children: [
-                SharedProfileAvatar(
-                  name: pmName,
-                  imageUrl: pm?.profile,
-                  radius: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        pmName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: context.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Project Manager',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: context.primary,
-                          ),
-                        ),
-                      ),
-                    ],
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: InkWell(
+              onTap: () {
+                if (pm != null) UserProfileSheet.show(context, pm);
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Row(
+                children: [
+                  SharedProfileAvatar(
+                    name: pmName,
+                    imageUrl: pm?.profile,
+                    radius: 24,
+                    showBorder: true,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          pmName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            color: context.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: context.primary.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                LangKeys.getLocalizedRole(
+                                  UserRole.projectManager,
+                                ),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: context.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '· ${LangKeys.workersCount.tr(args: [pmWorkers.length.toString()])}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: context.onSurface.withOpacity(0.4),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           if (pmWorkers.isNotEmpty) ...[
@@ -383,14 +396,14 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                                 UserProfileSheet.show(context, worker);
                               }
                             },
-                            borderRadius: BorderRadius.circular(100),
+                            borderRadius: BorderRadius.circular(12),
                             child: Container(
                               padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
                               decoration: BoxDecoration(
                                 color: context.surface,
-                                borderRadius: BorderRadius.circular(100),
+                                borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: context.primary.withOpacity(0.05),
+                                  color: context.onSurface.withOpacity(0.05),
                                 ),
                               ),
                               child: Row(
@@ -402,15 +415,15 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                                     radius: 12,
                                     showBorder: false,
                                   ),
-                                  const SizedBox(width: 6),
+                                  const SizedBox(width: 8),
                                   Flexible(
                                     child: Text(
                                       wName,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w700,
                                         color: context.onSurface.withOpacity(
-                                          0.8,
+                                          0.7,
                                         ),
                                       ),
                                       maxLines: 1,
@@ -425,18 +438,20 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                         if (pmWorkers.length > 10)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
+                              horizontal: 10,
+                              vertical: 6,
                             ),
                             decoration: BoxDecoration(
                               color: context.primary.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(100),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '+${pmWorkers.length - 10} more',
+                              LangKeys.moreItems.tr(
+                                args: [(pmWorkers.length - 10).toString()],
+                              ),
                               style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
                                 color: context.primary,
                               ),
                             ),
@@ -458,12 +473,12 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
     List<String> unassignedWorkers,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: context.error.withOpacity(0.01),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: context.error.withOpacity(0.2), width: 1.5),
+        color: context.error.withOpacity(0.02),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: context.error.withOpacity(0.1), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,7 +489,7 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: context.error.withOpacity(0.1),
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Ionicons.warning_outline,
@@ -487,19 +502,20 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Unassigned Workers',
+                    Text(
+                      LangKeys.unassignedWorkers.tr(),
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
+                        color: context.onSurface,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Needs Manager',
+                      LangKeys.needsManager.tr(),
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         color: context.error,
                       ),
                     ),
@@ -522,12 +538,12 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                       UserProfileSheet.show(context, worker);
                     }
                   },
-                  borderRadius: BorderRadius.circular(100),
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
                     decoration: BoxDecoration(
                       color: context.surface,
-                      borderRadius: BorderRadius.circular(100),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: context.error.withOpacity(0.1)),
                     ),
                     child: Row(
@@ -545,8 +561,8 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                             wName,
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: context.onSurface.withOpacity(0.8),
+                              fontWeight: FontWeight.w700,
+                              color: context.onSurface.withOpacity(0.7),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -560,18 +576,20 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
               if (unassignedWorkers.length > 10)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+                    horizontal: 10,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
                     color: context.error.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(100),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '+${unassignedWorkers.length - 10} more',
+                    LangKeys.moreItems.tr(
+                      args: [(unassignedWorkers.length - 10).toString()],
+                    ),
                     style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
                       color: context.error,
                     ),
                   ),
@@ -612,8 +630,8 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
         ),
         const SizedBox(height: 12),
         Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: 10,
+          runSpacing: 10,
           children: userIds.map((id) {
             final user = widget.users[id];
             final name = user?.name ?? LangKeys.unknown.tr();
@@ -621,20 +639,15 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
               onTap: () {
                 if (user != null) UserProfileSheet.show(context, user);
               },
-              borderRadius: BorderRadius.circular(100),
+              borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(4, 4, 16, 4),
+                padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
                 decoration: BoxDecoration(
-                  color: context.surface,
-                  borderRadius: BorderRadius.circular(100),
-                  border: Border.all(color: context.primary.withOpacity(0.1)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: context.primary.withOpacity(0.02),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color: context.onSurface.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: context.onSurface.withOpacity(0.06),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -645,12 +658,13 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                       showBorder: false,
                       imageUrl: user?.profile,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Text(
                       name,
-                      style: const TextStyle(
-                        fontSize: 12,
+                      style: TextStyle(
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
+                        color: context.onSurface.withOpacity(0.8),
                       ),
                     ),
                   ],

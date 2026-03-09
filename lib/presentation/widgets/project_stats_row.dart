@@ -68,30 +68,43 @@ class ProjectStatsRow extends StatelessWidget {
   ) {
     return InkWell(
       onTap: () => context.push('/project/${project.id}/tasks', extra: project),
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(28),
       child: PremiumCard(
-        padding: const EdgeInsets.all(16),
-        borderRadius: 24,
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        borderRadius: 28,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color.withOpacity(0.15)),
+              ),
+              child: Icon(icon, size: 16, color: color),
+            ),
+            const SizedBox(height: 16),
             Text(
               value,
               style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
                 color: context.onSurface,
+                letterSpacing: -0.5,
               ),
             ),
+            const SizedBox(height: 2),
             Text(
-              label,
+              label.toUpperCase(),
               style: TextStyle(
-                fontSize: 10,
-                color: context.onSurface.withOpacity(0.5),
-                fontWeight: FontWeight.w700,
+                fontSize: 9,
+                color: context.onSurface.withOpacity(0.4),
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
