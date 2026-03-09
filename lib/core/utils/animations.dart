@@ -19,7 +19,7 @@ class AppAnimations {
 
 extension AppAnimationExtensions on Widget {
   /// Standard entrance animation for screens and major components.
-  /// Smoothly fades in and slides up slightly.
+  /// Smoothly fades in and slides up slightly with a back-out elastic effect.
   Widget animateEntrance({int delayMs = 0}) {
     return this
         .animate(delay: delayMs.ms)
@@ -31,7 +31,7 @@ extension AppAnimationExtensions on Widget {
           begin: 0.1,
           end: 0,
           duration: AppAnimations.normal,
-          curve: AppAnimations.primaryCurve,
+          curve: AppAnimations.entranceCurve,
         );
   }
 
@@ -41,7 +41,7 @@ extension AppAnimationExtensions on Widget {
         .animate(delay: delayMs.ms)
         .fadeIn(duration: AppAnimations.fast)
         .scale(
-          begin: const Offset(0.95, 0.95),
+          begin: const Offset(0.92, 0.92),
           end: const Offset(1, 1),
           duration: AppAnimations.fast,
           curve: AppAnimations.entranceCurve,
@@ -49,14 +49,17 @@ extension AppAnimationExtensions on Widget {
   }
 
   /// Staggered entrance for list items.
-  Widget animateListStep({required int index}) {
+  Widget animateListStep({required int index, int baseDelayMs = 0}) {
+    // Limits the delay so long lists don't take forever to show up
+    final effectiveDelay = baseDelayMs + (50 * (index % 12));
+
     return this
-        .animate(delay: (index * AppAnimations.staggerDelay.inMilliseconds).ms)
+        .animate(delay: effectiveDelay.ms)
         .fadeIn(
           duration: AppAnimations.normal,
           curve: AppAnimations.smoothCurve,
         )
-        .slideX(
+        .slideY(
           begin: 0.05,
           end: 0,
           duration: AppAnimations.normal,

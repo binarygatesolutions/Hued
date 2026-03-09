@@ -21,9 +21,26 @@ class TaskCard extends StatelessWidget {
     this.isMyWorkerAssigned = false,
   });
 
+  String _getDeadlineDifference(DateTime deadline, DateTime? completedAt) {
+    if (completedAt == null) return '';
+    final diff = completedAt.difference(deadline);
+    if (diff.inDays.abs() > 0) {
+      return '${diff.inDays.abs()} ${LangKeys.days.tr()}';
+    } else if (diff.inHours.abs() > 0) {
+      return '${diff.inHours.abs()} ${LangKeys.hours.tr()}';
+    } else {
+      return '${diff.inMinutes.abs()} ${LangKeys.minutes.tr()}';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(task.status, context);
+    final isCompleted = task.status == TaskStatus.completed;
+    final isEarly =
+        isCompleted &&
+        task.completedAt != null &&
+        task.completedAt!.isBefore(task.deadline);
 
     return PremiumCard(
       margin: const EdgeInsets.only(bottom: 16),
@@ -103,32 +120,47 @@ class TaskCard extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     task.title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                      color: context.onSurface,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  '#${task.id.length > 6 ? task.id.substring(0, 6) : task.id}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 11,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: context.onSurface.withOpacity(0.04),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '#${task.id.length > 6 ? task.id.substring(0, 6) : task.id}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                      color: context.onSurface.withOpacity(0.5),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Text(
                               task.description,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 12,
-                                color: context.onSurfaceVariant,
+                                fontSize: 13,
+                                color: context.onSurfaceVariant.withOpacity(
+                                  0.8,
+                                ),
+                                height: 1.3,
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
@@ -136,15 +168,97 @@ class TaskCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      _buildPriorityTag(task.priority, context),
                     ],
                   ),
                   const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: context.onSurface.withOpacity(0.03),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Ionicons.calendar_outline,
+                              size: 14,
+                              color: context.onSurface.withOpacity(0.6),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              DateFormat.yMMMd(
+                                context.locale.toString(),
+                              ).format(task.deadline),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: context.onSurface.withOpacity(0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildPriorityTag(task.priority, context),
+                      const Spacer(),
+                      if (isCompleted && task.completedAt != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isEarly
+                                ? context.mintGreen.withOpacity(0.15)
+                                : context.error.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isEarly
+                                  ? context.mintGreen.withOpacity(0.3)
+                                  : context.error.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isEarly
+                                    ? Ionicons.checkmark_circle
+                                    : Ionicons.warning,
+                                color: isEarly
+                                    ? context.mintGreen
+                                    : context.error,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${isEarly ? LangKeys.early.tr() : LangKeys.late.tr()} ${_getDeadlineDifference(task.deadline, task.completedAt)}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: isEarly
+                                      ? context.mintGreen
+                                      : context.error,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
                   Divider(
                     height: 1,
                     color: context.onSurface.withOpacity(0.05),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   Row(
                     children: [
                       // Stacked worker avatars
@@ -154,8 +268,8 @@ class TaskCard extends StatelessWidget {
                         Text(
                           LangKeys.unknown.tr(),
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                             color: context.onSurface.withOpacity(0.4),
                           ),
                         ),

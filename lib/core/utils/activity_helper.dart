@@ -23,16 +23,20 @@ class ActivityHelper {
         subtitle = activity.content;
         break;
       case ActivityType.taskStatusChanged:
-        title = LangKeys.taskStatusChangedTo.tr(args: [activity.content]);
+        title = LangKeys.taskStatusChangedTo.tr(args: [activity.content.tr()]);
         subtitle = LangKeys.byUser.tr(args: [userName]);
         break;
       case ActivityType.projectStatusChanged:
-        title = LangKeys.projectStatusChangedTo.tr(args: [activity.content]);
+        title = LangKeys.projectStatusChangedTo.tr(
+          args: [activity.content.tr()],
+        );
         subtitle = LangKeys.byUser.tr(args: [userName]);
         break;
       case ActivityType.taskDeadlineUpdated:
         title = LangKeys.taskDeadlineUpdated.tr();
-        subtitle = LangKeys.byUser.tr(args: [userName]);
+        subtitle = activity.content.contains('|')
+            ? '${LangKeys.to.tr()} ${activity.content.split('|')[1]}'
+            : LangKeys.byUser.tr(args: [userName]);
         break;
       case ActivityType.taskApproved:
         title = LangKeys.taskApproved.tr();
@@ -47,7 +51,6 @@ class ActivityHelper {
         subtitle = LangKeys.byUser.tr(args: [userName]);
         break;
       case ActivityType.requestCreated:
-        // activity.content format: "taskStatus|targetStatus" or "projectStatus|targetStatus"
         final parts = activity.content.split('|');
         final type = parts[0];
         final status = parts.length > 1 ? parts[1] : '';
@@ -56,19 +59,18 @@ class ActivityHelper {
             type == 'taskStatus'
                 ? LangKeys.taskStatus.tr()
                 : LangKeys.projectStatus.tr(),
-            status,
+            status.tr(),
           ],
         );
         subtitle = LangKeys.byUser.tr(args: [userName]);
         break;
       case ActivityType.requestApprovedStep:
-        // activity.content format: "stepName|type"
         final parts = activity.content.split('|');
         final step = parts[0];
         final type = parts.length > 1 ? parts[1] : '';
         title = LangKeys.requestApprovedStepLog.tr(
           args: [
-            step.toUpperCase(),
+            step.tr().toUpperCase(),
             type == 'taskStatus'
                 ? LangKeys.taskStatus.tr()
                 : LangKeys.projectStatus.tr(),

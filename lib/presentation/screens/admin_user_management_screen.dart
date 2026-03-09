@@ -71,7 +71,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                 ),
                 TextSpan(text: LangKeys.to.tr()),
                 TextSpan(
-                  text: newRole.label,
+                  text: LangKeys.getLocalizedRole(newRole),
                   style: TextStyle(
                     color: context.primary,
                     fontWeight: FontWeight.w500,
@@ -339,7 +339,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                   if (_filterRole != null) ...[
                     const SizedBox(width: 4),
                     Text(
-                      _filterRole!.label,
+                      LangKeys.getLocalizedRole(_filterRole!),
                       style: TextStyle(
                         fontSize: 11,
                         color: context.primary,
@@ -353,7 +353,10 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
             itemBuilder: (context) => [
               PopupMenuItem(value: 0, child: Text(LangKeys.allRoles.tr())),
               ...UserRole.values.map(
-                (r) => PopupMenuItem(value: r, child: Text(r.label)),
+                (r) => PopupMenuItem(
+                  value: r,
+                  child: Text(LangKeys.getLocalizedRole(r)),
+                ),
               ),
             ],
           ),
@@ -508,7 +511,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    user.role.label,
+                    LangKeys.getLocalizedRole(user.role),
                     style: TextStyle(
                       color: context.primary.withOpacity(0.8),
                       fontSize: 11,
@@ -532,7 +535,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        role.label,
+                        LangKeys.getLocalizedRole(role),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: isSelected

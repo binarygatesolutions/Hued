@@ -29,8 +29,6 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_themeKey, mode.name);
-    } catch (_) {
-      // Ignore
-    }
+    } catch (_) {}
   }
 }

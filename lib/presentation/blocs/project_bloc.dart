@@ -387,6 +387,63 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
       ),
     );
     try {
+      final role = state.currentUserRole;
+
+      if (role != UserRole.client) {
+        final projects = await _projectRepository.getProjects();
+        final project = projects.firstWhere((p) => p.id == event.projectId);
+        final tasks = await _projectRepository.getTasks(event.projectId);
+        final task = tasks.firstWhere((t) => t.id == event.taskId);
+
+        // ONLY require approval if the task is already approved
+        if (task.isApproved) {
+          final List<String> requiredApproverIds = [];
+          ApprovalStep initialStep = ApprovalStep.pm;
+
+          if (role == UserRole.worker) {
+            final managerId = project.workerManagerMap[event.userId];
+            if (managerId != null) {
+              requiredApproverIds.add(managerId);
+            } else {
+              requiredApproverIds.addAll(project.managerIds);
+            }
+            initialStep = ApprovalStep.pm;
+          } else if (role == UserRole.projectManager) {
+            requiredApproverIds.addAll(project.supervisorIds);
+            initialStep = ApprovalStep.supervisor;
+          } else if (role == UserRole.supervisor || role == UserRole.admin) {
+            requiredApproverIds.addAll(project.clientIds);
+            initialStep = ApprovalStep.client;
+          }
+
+          if (requiredApproverIds.isNotEmpty) {
+            final request = RequestEntity(
+              id: 'req_${DateTime.now().millisecondsSinceEpoch}',
+              projectId: event.projectId,
+              taskId: event.taskId,
+              initiatorId: event.userId,
+              initiatorRole: role!,
+              type: RequestType.taskDeadline,
+              targetStatus: event.deadline.toIso8601String(),
+              currentStep: initialStep,
+              status: RequestStatus.pending,
+              requiredApproverIds: requiredApproverIds,
+              createdAt: DateTime.now(),
+            );
+            await _projectRepository.createRequest(request);
+            emit(
+              ProjectInitial(
+                currentUserId: state.currentUserId,
+                currentUserRole: state.currentUserRole,
+                projects: state.projects,
+                pendingRequests: state.pendingRequests,
+              ),
+            );
+            return;
+          }
+        }
+      }
+
       await _projectRepository.updateTaskDeadline(
         event.projectId,
         event.taskId,
@@ -410,9 +467,6 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
           currentUserId: state.currentUserId,
           currentUserRole: state.currentUserRole,
           projects: state.projects,
-          pendingRequests: state.pendingRequests,
-          hasMore: state.hasMore,
-          lastDoc: state.lastDoc,
         ),
       );
     }

@@ -8,15 +8,18 @@ import 'shared_profile_avatar.dart';
 import 'user_profile_sheet.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/localization/lang_keys.dart';
+import 'package:go_router/go_router.dart';
 
 class ProjectStakeholderCard extends StatefulWidget {
   final ProjectEntity project;
   final Map<String, UserEntity> users;
+  final UserEntity currentUser;
 
   const ProjectStakeholderCard({
     super.key,
     required this.project,
     required this.users,
+    required this.currentUser,
   });
 
   @override
@@ -43,25 +46,78 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    Ionicons.people_circle_outline,
-                    color: context.onSurface,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    LangKeys.teamManagement.tr().toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Ionicons.people_circle_outline,
                       color: context.onSurface,
+                      size: 20,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        LangKeys.teamManagement.tr().toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                          color: context.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (widget.currentUser.role == UserRole.admin &&
+                        widget.project.creatorId == widget.currentUser.id &&
+                        widget.project.status != ProjectStatus.finished) ...[
+                      const SizedBox(width: 8),
+
+                      InkWell(
+                        onTap: () {
+                          context.push(
+                            '/project/${widget.project.id}/manage-users',
+                            extra: widget.project,
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(100),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(100),
+                            border: Border.all(
+                              color: context.primary.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Ionicons.options_outline,
+                                size: 14,
+                                color: context.primary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                LangKeys.manageTeam.tr(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: context.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
+              SizedBox(width: 8),
               InkWell(
                 onTap: () {
                   setState(() {

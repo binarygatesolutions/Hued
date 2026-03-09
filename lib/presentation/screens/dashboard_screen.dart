@@ -24,6 +24,8 @@ import '../widgets/approval_request_card.dart';
 import '../widgets/shared_smart_refresher.dart';
 import 'package:pull_to_refresh_flutter3/pull_to_refresh_flutter3.dart';
 import 'package:hued/core/utils/animations.dart';
+import 'package:hued/core/utils/haptics_service.dart';
+import '../widgets/project_section_header.dart';
 
 int _activeProjects = 0;
 int _finishedProjects = 0;
@@ -157,7 +159,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   (user.role == UserRole.admin ||
                       user.role == UserRole.supervisor)
                   ? FloatingActionButton.extended(
-                      onPressed: () => context.pushNamed(AppRouter.addProject),
+                      onPressed: () {
+                        HapticsService.light();
+                        context.pushNamed(AppRouter.addProject);
+                      },
                       backgroundColor: context.primary,
                       icon: Icon(Ionicons.add, color: context.surface),
                       label: Text(
@@ -167,7 +172,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ).animateScale(delayMs: 400)
+                    ).animateScale(delayMs: 600)
                   : null,
               body: _buildRoleSpecificContent(context, user),
             );
@@ -262,7 +267,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                 ),
                                 child: Text(
-                                  user.role.name.toUpperCase(),
+                                  LangKeys.getLocalizedRole(
+                                    user.role,
+                                  ).toUpperCase(),
                                   style: TextStyle(
                                     color: context.primary,
                                     fontSize: 9,
@@ -288,7 +295,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           _buildQuickStats(context, state),
                         ],
                       ),
-                    ),
+                    ).animateEntrance(delayMs: 200),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   SliverToBoxAdapter(child: _buildProjectHeader(context)),
@@ -349,7 +356,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       )
                       .animate()
-                      .fadeIn(delay: (index % 10 * 50).ms)
+                      .fadeIn(delay: (500 + (index % 10 * 50)).ms)
                       .slideY(begin: 0.1, curve: Curves.easeOutCubic),
             );
           },
@@ -364,25 +371,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: BlocBuilder<ProjectBloc, ProjectState>(
-        builder: (context, state) {
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    LangKeys.allProjects.tr(),
-                    style: context.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
+      child: ProjectSectionHeader(
+        title: LangKeys.allProjects.tr(),
+        color: context.primary,
+        icon: Ionicons.grid_outline,
+      ).animateEntrance(delayMs: 500),
     );
   }
 
@@ -444,6 +437,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: LangKeys.activeProjects.tr(),
             value: '$_activeProjects',
             color: context.primary,
+            delayMs: 200,
           ),
           const SizedBox(width: 16),
           _buildStatTile(
@@ -452,6 +446,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: LangKeys.finishedProjects.tr(),
             value: '$_finishedProjects',
             color: context.mintGreen,
+            delayMs: 300,
           ),
           const SizedBox(width: 16),
           _buildStatTile(
@@ -460,6 +455,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: LangKeys.canceledProjects.tr(),
             value: '$_canceledProjects',
             color: context.error.withOpacity(0.75),
+            delayMs: 400,
           ),
         ],
       ),
@@ -472,6 +468,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required String label,
     required String value,
     required Color color,
+    int delayMs = 0,
   }) {
     return SizedBox(
       width: 156,
@@ -511,7 +508,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
-    ).animateScale();
+    ).animateScale(delayMs: delayMs);
   }
 
   Widget _buildNotificationIcon(BuildContext context, UserEntity user) {

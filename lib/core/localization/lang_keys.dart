@@ -1,4 +1,22 @@
+import 'package:easy_localization/easy_localization.dart';
+import '../../domain/entities/entities.dart';
+
 abstract class LangKeys {
+  static String getLocalizedRole(UserRole role) {
+    switch (role) {
+      case UserRole.admin:
+        return roleAdmin.tr();
+      case UserRole.supervisor:
+        return roleSupervisor.tr();
+      case UserRole.projectManager:
+        return roleProjectManager.tr();
+      case UserRole.client:
+        return roleClient.tr();
+      case UserRole.worker:
+        return roleWorker.tr();
+    }
+  }
+
   static const appTitle = 'appTitle';
   static const addTask = 'addTask';
   static const assignWorkers = 'assignWorkers';
@@ -81,6 +99,12 @@ abstract class LangKeys {
   static const fillDetailsForNewProject = 'fillDetailsForNewProject';
   static const taskTimeline = 'taskTimeline';
   static const projectTimeline = 'projectTimeline';
+  static const requestExtension = 'requestExtension';
+  static const requestSubmitted = 'requestSubmitted';
+  static const confirmWorkerRemove = 'confirmWorkerRemove';
+  static const confirmWorkerAdd = 'confirmWorkerAdd';
+  static const areYouSure = 'areYouSure';
+  static const confirm = 'confirm';
   static const system = 'system';
   static const team = 'team';
   static const searchByNameOrEmail = 'searchByNameOrEmail';
@@ -212,4 +236,49 @@ abstract class LangKeys {
   static const requestApprovedStepLog = 'requestApprovedStepLog';
   static const requestRejectedLog = 'requestRejectedLog';
   static const rejectionReasonLog = 'rejectionReasonLog';
+  static const minutes = 'minutes';
+  static const hours = 'hours';
+  static const days = 'days';
+  static const early = 'early';
+  static const late = 'late';
+  static const timeRemaining = 'timeRemaining';
+  static const overdue = 'overdue';
+  static const currentStatus = 'currentStatus';
+  static const currentDeadline = 'currentDeadline';
+  static const assignAtLeastOneWorker = 'assignAtLeastOneWorker';
+  static const assignWorkersUpper = 'assignWorkersUpper';
+  static const noWorkersAssigned = 'noWorkersAssigned';
+  static const pleaseSelectSpecialty = 'pleaseSelectSpecialty';
+  static const accountType = 'accountType';
+  static const loadFailedRetry = 'loadFailedRetry';
+  static const releaseToLoadMore = 'releaseToLoadMore';
+  static const coreMetrics = 'coreMetrics';
+  static const coreInsights = 'coreInsights';
+  static const projectCompletion = 'projectCompletion';
+  static const allTime = 'allTime';
+  static const visualAnalytics = 'visualAnalytics';
+  static const noData = 'noData';
+  static const userRolesDistribution = 'userRolesDistribution';
+  static const roleAdmShort = 'roleAdmShort';
+  static const roleSupShort = 'roleSupShort';
+  static const rolePmShort = 'rolePmShort';
+  static const roleCliShort = 'roleCliShort';
+  static const pickFile = 'pickFile';
+  static const submitFile = 'submitFile';
+  static const approveResult = 'approveResult';
+  static const rejectAndComment = 'rejectAndComment';
+  static const activeRequests = 'activeRequests';
+  static const noPendingRequests = 'noPendingRequests';
+  static const approvedAt = 'approvedAt';
+  static const rejectedAt = 'rejectedAt';
+  static const activeProjectsCount = 'activeProjectsCount';
+  static const now = 'now';
+  static const minutesShort = 'minutesShort';
+  static const hoursShort = 'hoursShort';
+  static const daysShort = 'daysShort';
+  static const workers = 'workers';
+  static const workerAssignments = 'workerAssignments';
+  static const selectPm = 'selectPm';
+  static const unknownWorker = 'unknownWorker';
+  static const assignPmToWorker = 'assignPmToWorker';
 }

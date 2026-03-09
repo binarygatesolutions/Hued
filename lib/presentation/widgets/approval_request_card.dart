@@ -13,6 +13,7 @@ import '../blocs/auth_state.dart';
 import '../widgets/shared_profile_avatar.dart';
 import 'premium_card.dart';
 import '../../core/theme/theme_ext.dart';
+import '../../core/utils/haptics_service.dart';
 
 class ApprovalRequestCard extends StatelessWidget {
   final RequestEntity request;
@@ -71,6 +72,8 @@ class ApprovalRequestCard extends StatelessWidget {
                       child: Icon(
                         request.type == RequestType.taskStatus
                             ? Ionicons.list_outline
+                            : request.type == RequestType.taskDeadline
+                            ? Ionicons.calendar_outline
                             : Ionicons.rocket_outline,
                         size: 18,
                         color: canApprove ? Colors.amber[800] : context.primary,
@@ -85,7 +88,7 @@ class ApprovalRequestCard extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
-                _buildStatusTransition(context),
+                _buildStatusTransition(context, details),
 
                 const SizedBox(height: 10),
 
@@ -147,7 +150,10 @@ class ApprovalRequestCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      DateFormat('h:mm a').format(request.createdAt),
+                      DateFormat(
+                        'h:mm a',
+                        context.locale.toString(),
+                      ).format(request.createdAt),
                       style: TextStyle(
                         color: context.onSurface.withOpacity(0.4),
                         fontSize: 11,
@@ -210,20 +216,82 @@ class ApprovalRequestCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusTransition(BuildContext context) {
+  Widget _buildStatusTransition(
+    BuildContext context,
+    Map<String, dynamic>? details,
+  ) {
+    final task = details?['task'] as TaskEntity?;
+    String fromValue = request.currentStep.name;
+
+    if (request.type == RequestType.taskStatus && task != null) {
+      fromValue = task.status.name.tr();
+    } else if (request.type == RequestType.taskDeadline && task != null) {
+      fromValue = DateFormat(
+        'MMM dd, yyyy',
+        context.locale.toString(),
+      ).format(task.deadline);
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusChip(context, request.currentStep.name, false),
-          const SizedBox(width: 12),
-          Icon(
-            Ionicons.arrow_forward,
-            size: 18,
-            color: context.onSurface.withOpacity(0.2),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      LangKeys.change.tr().toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        color: context.onSurface.withOpacity(0.3),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    _buildStatusChip(context, fromValue, false),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 12, right: 12, top: 15),
+                child: Icon(
+                  Icons.arrow_forward,
+                  size: 18,
+                  color: context.onSurface.withOpacity(0.2),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      LangKeys.to.tr().toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        color: context.primary.withOpacity(0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    _buildStatusChip(
+                      context,
+                      request.type == RequestType.taskDeadline
+                          ? DateFormat(
+                              'MMM dd, yyyy',
+                              context.locale.toString(),
+                            ).format(DateTime.parse(request.targetStatus))
+                          : request.targetStatus.tr(),
+                      true,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          _buildStatusChip(context, request.targetStatus, true),
         ],
       ),
     );
@@ -318,12 +386,13 @@ class ApprovalRequestCard extends StatelessWidget {
       final project = projects
           .where((p) => p.id == request.projectId)
           .firstOrNull;
-      results['projectName'] = project?.title ?? 'Unknown Project';
+      results['projectName'] = project?.title ?? LangKeys.unknown.tr();
 
       if (request.taskId != null) {
         final tasks = await projectRepo.getTasks(request.projectId);
         final task = tasks.where((t) => t.id == request.taskId).firstOrNull;
         results['taskName'] = task?.title;
+        results['task'] = task;
       }
 
       if (request.approvedBy.isNotEmpty) {
@@ -411,6 +480,8 @@ class ApprovalRequestCard extends StatelessWidget {
                       child: Text(
                         request.type == RequestType.taskStatus
                             ? LangKeys.taskStatus.tr().toUpperCase()
+                            : request.type == RequestType.taskDeadline
+                            ? LangKeys.deadlineLabel.tr().toUpperCase()
                             : LangKeys.projectStatus.tr().toUpperCase(),
                         style: TextStyle(
                           color: context.primary,
@@ -464,8 +535,17 @@ class ApprovalRequestCard extends StatelessWidget {
                     children: [
                       _buildStatusNode(
                         context,
-                        LangKeys.currentStep.tr(),
-                        request.currentStep.name,
+                        LangKeys.currentStatus.tr(),
+                        request.type == RequestType.taskStatus
+                            ? ((details?['task'] as TaskEntity?)?.status.name ??
+                                      '...')
+                                  .tr()
+                            : request.type == RequestType.taskDeadline
+                            ? DateFormat.MMMd(context.locale.toString()).format(
+                                (details?['task'] as TaskEntity?)?.deadline ??
+                                    DateTime.now(),
+                              )
+                            : request.currentStep.name.tr(),
                         false,
                       ),
                       Container(
@@ -483,7 +563,11 @@ class ApprovalRequestCard extends StatelessWidget {
                       _buildStatusNode(
                         context,
                         LangKeys.targetStatus.tr(),
-                        request.targetStatus,
+                        request.type == RequestType.taskDeadline
+                            ? DateFormat.MMMd(
+                                context.locale.toString(),
+                              ).format(DateTime.parse(request.targetStatus))
+                            : request.targetStatus.tr(),
                         true,
                       ),
                     ],
@@ -579,6 +663,7 @@ class ApprovalRequestCard extends StatelessWidget {
                               color: Colors.redAccent,
                               isOutlined: true,
                               onPressed: () {
+                                HapticsService.medium();
                                 if (reasonController.text.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
@@ -612,6 +697,7 @@ class ApprovalRequestCard extends StatelessWidget {
                               label: LangKeys.approve.tr(),
                               color: context.primary,
                               onPressed: () {
+                                HapticsService.heavy();
                                 final state = context.read<AuthBloc>().state;
                                 if (state is Authenticated) {
                                   context.read<ProjectBloc>().add(

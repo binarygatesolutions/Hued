@@ -30,7 +30,30 @@ class TaskTeamCard extends StatefulWidget {
 }
 
 class _TaskTeamCardState extends State<TaskTeamCard> {
-  bool _isExpanded = false;
+  bool _isExpanded = true;
+
+  Future<bool?> _showConfirmationDialog(BuildContext context, String message) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(LangKeys.areYouSure.tr()),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(LangKeys.cancel.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              LangKeys.confirm.tr(),
+              style: TextStyle(color: context.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +195,7 @@ class _TaskTeamCardState extends State<TaskTeamCard> {
                         },
                         borderRadius: BorderRadius.circular(100),
                         child: Container(
-                          padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+                          padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
                           decoration: BoxDecoration(
                             color: context.onSurface.withOpacity(0.04),
                             borderRadius: BorderRadius.circular(100),
@@ -202,11 +225,18 @@ class _TaskTeamCardState extends State<TaskTeamCard> {
                               if (canManage) ...[
                                 const SizedBox(width: 4),
                                 GestureDetector(
-                                  onTap: () {
-                                    final newList = List<String>.from(
-                                      task.assignedWorkerIds,
-                                    )..remove(wId);
-                                    widget.onWorkersUpdated?.call(newList);
+                                  onTap: () async {
+                                    final confirmed =
+                                        await _showConfirmationDialog(
+                                          context,
+                                          LangKeys.confirmWorkerRemove.tr(),
+                                        );
+                                    if (confirmed == true) {
+                                      final newList = List<String>.from(
+                                        task.assignedWorkerIds,
+                                      )..remove(wId);
+                                      widget.onWorkersUpdated?.call(newList);
+                                    }
                                   },
                                   child: Icon(
                                     Ionicons.close_circle,
@@ -215,6 +245,7 @@ class _TaskTeamCardState extends State<TaskTeamCard> {
                                   ),
                                 ),
                               ],
+                              SizedBox(width: 5),
                             ],
                           ),
                         ),
@@ -402,7 +433,7 @@ class _TaskTeamCardState extends State<TaskTeamCard> {
         IconButton(
           onPressed: () => UserProfileSheet.show(context, user),
           icon: Icon(
-            Ionicons.chevron_forward,
+            Icons.arrow_forward_ios,
             size: 20,
             color: context.onSurface.withOpacity(0.3),
           ),
@@ -511,17 +542,27 @@ class _TaskTeamCardState extends State<TaskTeamCard> {
                           : Ionicons.add_circle_outline,
                       color: isAssigned ? context.primary : null,
                     ),
-                    onTap: () {
-                      final newList = List<String>.from(
-                        widget.task.assignedWorkerIds,
+                    onTap: () async {
+                      final message = isAssigned
+                          ? LangKeys.confirmWorkerRemove.tr()
+                          : LangKeys.confirmWorkerAdd.tr();
+                      final confirmed = await _showConfirmationDialog(
+                        context,
+                        message,
                       );
-                      if (isAssigned) {
-                        newList.remove(workerId);
-                      } else {
-                        newList.add(workerId);
+
+                      if (confirmed == true) {
+                        final newList = List<String>.from(
+                          widget.task.assignedWorkerIds,
+                        );
+                        if (isAssigned) {
+                          newList.remove(workerId);
+                        } else {
+                          newList.add(workerId);
+                        }
+                        widget.onWorkersUpdated?.call(newList);
+                        if (context.mounted) Navigator.pop(context);
                       }
-                      widget.onWorkersUpdated?.call(newList);
-                      Navigator.pop(context);
                     },
                   );
                 },

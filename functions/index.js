@@ -517,7 +517,7 @@ exports.onRequestUpdated = onDocumentUpdated("requests/{requestId}", async (even
     if (newData.status === "rejected") {
         // LOG ACTIVITY
         await db.collection("projects").doc(projectId).collection("activities").add({
-            userId: newData.lastUpdatedBy || "system", // The one who rejected
+            userId: newData.lastUpdatedBy || "system",
             type: "requestRejected",
             content: newData.rejectionReason || "No reason provided",
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -530,6 +530,10 @@ exports.onRequestUpdated = onDocumentUpdated("requests/{requestId}", async (even
             "requestRejected",
             { requestId }
         );
+
+        // Delete the request after rejection
+        await db.collection("requests").doc(requestId).delete();
+
         return null;
     }
 
@@ -567,12 +571,20 @@ exports.onRequestUpdated = onDocumentUpdated("requests/{requestId}", async (even
             if (newData.type === "taskStatus") {
                 await db.collection("projects").doc(projectId).collection("tasks").doc(newData.taskId).update({
                     status: newData.targetStatus,
-                    lastUpdatedBy: "system_approval"
+                    lastUpdatedBy: newData.initiatorId || "system"
                 });
             } else if (newData.type === "projectStatus") {
                 await db.collection("projects").doc(projectId).update({
                     status: newData.targetStatus,
-                    lastUpdatedBy: "system_approval"
+                    lastUpdatedBy: newData.initiatorId || "system"
+                });
+            } else if (newData.type === "taskDeadline") {
+                const newDeadlineDate = new Date(newData.targetStatus);
+                const newDeadlineTimestamp = admin.firestore.Timestamp.fromDate(newDeadlineDate);
+
+                await db.collection("projects").doc(projectId).collection("tasks").doc(newData.taskId).update({
+                    deadline: newDeadlineTimestamp,
+                    lastUpdatedBy: newData.initiatorId || "system"
                 });
             }
 
@@ -583,6 +595,9 @@ exports.onRequestUpdated = onDocumentUpdated("requests/{requestId}", async (even
                 "requestExecuted",
                 { requestId, projectId }
             );
+
+            // Delete the request after successful execution
+            await db.collection("requests").doc(requestId).delete();
         } else if (nextStep && nextApprovers.length > 0) {
             // MOVE TO NEXT STEP
             await db.collection("requests").doc(requestId).update({

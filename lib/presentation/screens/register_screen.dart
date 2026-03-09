@@ -161,7 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return DropdownButtonFormField<UserRole>(
       value: _selectedRole,
       decoration: InputDecoration(
-        labelText: "Account Type",
+        labelText: LangKeys.accountType.tr(),
         prefixIcon: const Icon(Ionicons.person_circle_outline),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         filled: true,
@@ -169,9 +169,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       isExpanded: true,
       items: [UserRole.client, UserRole.worker].map((role) {
+        String localizedLabel;
+        switch (role) {
+          case UserRole.client:
+            localizedLabel = LangKeys.roleClient.tr();
+            break;
+          case UserRole.worker:
+            localizedLabel = LangKeys.roleWorker.tr();
+            break;
+          default:
+            localizedLabel = role.label;
+        }
         return DropdownMenuItem(
           value: role,
-          child: Text(role.label, overflow: TextOverflow.ellipsis),
+          child: Text(localizedLabel, overflow: TextOverflow.ellipsis),
         );
       }).toList(),
       onChanged: (val) {
@@ -261,7 +272,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _nameController.text.isNotEmpty) {
       if (_selectedRole == UserRole.worker && _selectedSpecialty == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please select a specialty")),
+          SnackBar(content: Text(LangKeys.pleaseSelectSpecialty.tr())),
         );
         return;
       }

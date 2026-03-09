@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'entities.dart';
 
-enum RequestType { taskStatus, projectStatus }
+enum RequestType { taskStatus, projectStatus, taskDeadline }
 
 enum RequestStatus { pending, approved, rejected }
 

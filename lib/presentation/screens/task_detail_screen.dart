@@ -1,22 +1,19 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:easy_localization/easy_localization.dart';
-
 import '../../core/localization/lang_keys.dart';
 import 'package:hued/presentation/widgets/shared_app_bar.dart';
 import 'package:ionicons/ionicons.dart';
-import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/task_team_card.dart';
 import '../../core/utils/animations.dart';
+import '../../core/utils/haptics_service.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/entities.dart';
-import '../../domain/entities/activity_entity.dart';
 import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
 import '../blocs/project_bloc.dart';
@@ -234,20 +231,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     required bool enablePullUp,
   }) {
     final projectId = project.id;
+    final hasPendingDeadlineRequest = pendingRequests.any(
+      (r) => r.type == RequestType.taskDeadline,
+    );
+    final hasPendingStatusRequest = pendingRequests.any(
+      (r) => r.type == RequestType.taskStatus,
+    );
     final hasPendingRequest = pendingRequests.isNotEmpty;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: SharedAppBar(
         title: task.title,
-        actions: [
-          if (_canEditDeadline(task, user))
-            IconButton(
-              icon: Icon(Ionicons.calendar_outline, color: context.onSurface),
-              onPressed: () => _selectDate(context, projectId, task),
-            ),
-          const SizedBox(width: 8),
-        ],
+        actions: [const SizedBox(width: 8)],
       ),
       body: Stack(
         children: [
@@ -276,6 +272,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   task,
                                   user,
                                   projectId,
+                                  hasPendingDeadlineRequest,
                                 ).animateEntrance(),
                                 const SizedBox(height: 40),
                                 _buildDescription(
@@ -299,20 +296,29 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   },
                                 ).animateEntrance(delayMs: 250),
 
-                                if (hasPendingRequest)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 32),
-                                    child: ApprovalRequestCard(
-                                      request: pendingRequests.first,
+                                if (hasPendingRequest) ...[
+                                  const SizedBox(height: 32),
+                                  ...pendingRequests.asMap().entries.map((
+                                    entry,
+                                  ) {
+                                    final index = entry.key;
+                                    final request = entry.value;
+                                    return ApprovalRequestCard(
+                                      request: request,
                                       isCompact: true,
-                                    ).animateEntrance(delayMs: 250),
-                                  ),
+                                    ).animateEntrance(
+                                      delayMs: 250 + (index * 50),
+                                    );
+                                  }),
+                                ],
 
                                 if (task.isApproved)
                                   AbsorbPointer(
-                                    absorbing: hasPendingRequest,
+                                    absorbing: hasPendingStatusRequest,
                                     child: Opacity(
-                                      opacity: hasPendingRequest ? 0.5 : 1.0,
+                                      opacity: hasPendingStatusRequest
+                                          ? 0.5
+                                          : 1.0,
                                       child: _buildStatusControl(
                                         context,
                                         projectId,
@@ -407,6 +413,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     TaskEntity task,
     UserEntity user,
     String projectId,
+    bool hasPendingDeadlineRequest,
   ) {
     return PremiumCard(
       padding: const EdgeInsets.all(28),
@@ -485,17 +492,192 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 context,
                 Ionicons.time_outline,
                 LangKeys.createdLabel.tr(),
-                DateFormat('MMM dd, yyyy').format(task.createdAt),
+                DateFormat.yMMMd().format(task.createdAt),
                 context.onSurface.withOpacity(0.4),
               ),
-              _buildMetaItem(
-                context,
-                Ionicons.calendar_outline,
-                LangKeys.deadlineLabel.tr(),
-                DateFormat('MMM dd, yyyy').format(task.deadline),
-                context.primary,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildMetaItem(
+                    context,
+                    Ionicons.calendar_outline,
+                    LangKeys.deadlineLabel.tr(),
+                    DateFormat.yMMMd(
+                      context.locale.toString(),
+                    ).format(task.deadline),
+                    context.primary,
+                  ),
+                  if (_canEditDeadline(task, user) &&
+                      !hasPendingDeadlineRequest) ...[
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () {
+                        HapticsService.light();
+                        _selectDate(context, projectId, task, user);
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: context.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: context.primary.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Ionicons.create_outline,
+                              size: 12,
+                              color: context.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              (user.role == UserRole.admin ||
+                                      user.role == UserRole.supervisor ||
+                                      user.role == UserRole.client)
+                                  ? LangKeys.change.tr()
+                                  : LangKeys.requestExtension.tr(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: context.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
+          ),
+          if (task.status == TaskStatus.completed &&
+              task.completedAt != null) ...[
+            const SizedBox(height: 16),
+            _buildCompletionStatusBanner(context, task),
+          ],
+          if (task.status != TaskStatus.completed &&
+              task.status != TaskStatus.cancelled) ...[
+            const SizedBox(height: 20),
+            _buildTimeRemainingProgress(context, task),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeRemainingProgress(BuildContext context, TaskEntity task) {
+    final now = DateTime.now();
+    final totalDuration = task.deadline.difference(task.createdAt);
+    final elapsedDuration = now.difference(task.createdAt);
+
+    double progress =
+        elapsedDuration.inMilliseconds / totalDuration.inMilliseconds;
+    progress = progress.clamp(0.0, 1.0);
+
+    final isOverdue = now.isAfter(task.deadline);
+    final diff = isOverdue
+        ? now.difference(task.deadline)
+        : task.deadline.difference(now);
+
+    String diffText = '';
+    if (diff.inDays.abs() > 0) {
+      diffText = '${diff.inDays.abs()} ${LangKeys.days.tr()}';
+    } else if (diff.inHours.abs() > 0) {
+      diffText = '${diff.inHours.abs()} ${LangKeys.hours.tr()}';
+    } else {
+      diffText = '${diff.inMinutes.abs()} ${LangKeys.minutes.tr()}';
+    }
+    final color = isOverdue ? context.error : context.primary;
+    final text = isOverdue
+        ? '${LangKeys.overdue.tr()}: $diffText'
+        : '${LangKeys.timeRemaining.tr()}: $diffText';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              text,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              '${(progress * 100).toInt()}%',
+              style: TextStyle(
+                color: context.onSurface.withOpacity(0.5),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: context.onSurface.withOpacity(0.1),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 6,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompletionStatusBanner(BuildContext context, TaskEntity task) {
+    if (task.completedAt == null) return const SizedBox.shrink();
+
+    final isEarly = task.completedAt!.isBefore(task.deadline);
+    final diff = task.completedAt!.difference(task.deadline);
+
+    String diffText = '';
+    if (diff.inDays.abs() > 0) {
+      diffText = '${diff.inDays.abs()} ${LangKeys.days.tr()}';
+    } else if (diff.inHours.abs() > 0) {
+      diffText = '${diff.inHours.abs()} ${LangKeys.hours.tr()}';
+    } else {
+      diffText = '${diff.inMinutes.abs()} ${LangKeys.minutes.tr()}';
+    }
+
+    final color = isEarly ? context.mintGreen : context.error;
+    final icon = isEarly ? Ionicons.checkmark_circle : Ionicons.warning;
+    final prefixText = isEarly ? LangKeys.early.tr() : LangKeys.late.tr();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              '${LangKeys.taskStatusCompleted.tr()} $prefixText $diffText',
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -512,8 +694,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Ionicons.time_outline, size: 12, color: color),
-        SizedBox(width: 5),
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 5),
         Text(
           label,
           style: TextStyle(
@@ -652,17 +834,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CustomLoading(size: 10),
                         )
                       : Icon(Ionicons.attach_outline, color: context.primary),
-                  onPressed: _isUploadingAttachment
-                      ? null
-                      : () => _showAttachmentPicker(
-                          context,
-                          projectId,
-                          taskId,
-                          user,
-                        ),
+                  onPressed: () {
+                    HapticsService.light();
+                    _showAttachmentPicker(context, projectId, taskId, user);
+                  },
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -684,6 +862,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     ? null
                     : () {
                         if (controller.text.isNotEmpty) {
+                          HapticsService.medium();
                           context.read<ProjectBloc>().add(
                             AddActivity(
                               projectId: projectId,
@@ -709,12 +888,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+                        child: CustomLoading(size: 10, color: Colors.white),
                       )
-                    : const Icon(Ionicons.send),
+                    : const Icon(Icons.send),
               );
             },
           ),
@@ -755,6 +931,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 Expanded(
                   child: TextButton(
                     onPressed: () {
+                      HapticsService.medium();
                       onReject();
                       Navigator.pop(context); // Optional extra safety
                     },
@@ -776,6 +953,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
+                      HapticsService.heavy();
                       onApprove();
                       Navigator.pop(context);
                     },
@@ -833,6 +1011,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   onTap: () {
                     if (task.status == TaskStatus.completed) return;
                     if (status == TaskStatus.cancelled) return;
+                    HapticsService.selection();
                     context.read<ProjectBloc>().add(
                       UpdateTaskStatus(
                         projectId: projectId,
@@ -865,7 +1044,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          status.name.toUpperCase(),
+                          status.name.tr().toUpperCase(),
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w900,
@@ -930,18 +1109,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   bool _canEditDeadline(TaskEntity task, UserEntity user) {
-    if (task.isApproved) return false;
-
-    return user.role == UserRole.admin ||
-        user.role == UserRole.supervisor ||
-        user.role == UserRole.projectManager ||
-        user.role == UserRole.client;
+    if (task.status == TaskStatus.completed ||
+        task.status == TaskStatus.cancelled) {
+      return false;
+    }
+    return true; // Bloc will handle requests automatically unless Client/Admin
   }
 
   Future<void> _selectDate(
     BuildContext context,
     String projectId,
     TaskEntity task,
+    UserEntity user,
   ) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -949,7 +1128,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (picked != null) {
+    if (picked != null && picked != task.deadline) {
       final authState = context.read<AuthBloc>().state;
       if (authState is Authenticated) {
         context.read<ProjectBloc>().add(
@@ -960,6 +1139,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             userId: authState.user.id,
           ),
         );
+
+        if (user.role != UserRole.client && task.isApproved) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(LangKeys.requestSubmitted.tr()),
+              backgroundColor: context.primary,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
       }
     }
   }
@@ -1039,7 +1231,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${LangKeys.by.tr()} ${users[attachment.userId]?.name ?? LangKeys.unknown.tr()} • ${DateFormat('MMM dd').format(attachment.createdAt)}',
+                          '${LangKeys.by.tr()} ${users[attachment.userId]?.name ?? LangKeys.unknown.tr()} • ${DateFormat('MMM dd', context.locale.toString()).format(attachment.createdAt)}',
                           style: TextStyle(
                             fontSize: 11,
                             color: context.onSurface.withOpacity(0.4),

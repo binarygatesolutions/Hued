@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hued/presentation/widgets/custom_loading.dart';
 import 'package:pull_to_refresh_flutter3/pull_to_refresh_flutter3.dart';
+import 'package:easy_localization/easy_localization.dart';
+import '../../core/localization/lang_keys.dart';
 
 class SharedSmartRefresher extends StatelessWidget {
   final RefreshController controller;
@@ -46,9 +48,9 @@ class SharedSmartRefresher extends StatelessWidget {
           } else if (mode == LoadStatus.loading) {
             body = CustomLoading(size: 20);
           } else if (mode == LoadStatus.failed) {
-            body = const Text("Load Failed! Click retry!");
+            body = Text(LangKeys.loadFailedRetry.tr());
           } else if (mode == LoadStatus.canLoading) {
-            body = const Text("Release to load more");
+            body = Text(LangKeys.releaseToLoadMore.tr());
           } else {
             body = SizedBox();
           }

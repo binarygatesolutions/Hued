@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 class AppColors {
   // Brand identity from livehued.com
   static const Color primary = Color(0xFFEE2737);
+  // Note: For dynamic mintGreen based on theme, use context.mintGreen.
   static const Color mintGreen = Color(0xFF6EFE99);
+  static const Color mintGreenLight = Colors.green;
   static const Color limeYellow = Color(0xFFE9E141);
   static const Color purple = Color(0xFF7B2CBF);
 

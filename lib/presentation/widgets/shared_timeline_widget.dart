@@ -4,6 +4,8 @@ import '../../core/theme/theme_ext.dart';
 import './activity_timeline_tile.dart';
 import '../blocs/project_bloc.dart';
 import '../blocs/project_state.dart';
+import 'package:easy_localization/easy_localization.dart';
+import '../../core/localization/lang_keys.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SharedTimelineWidget extends StatelessWidget {
@@ -48,8 +50,8 @@ class SharedTimelineWidget extends StatelessWidget {
                 label: Row(
                   children: [
                     Text(
-                      'VIEW ALL',
-                      style: TextStyle(
+                      LangKeys.viewAll.tr().toUpperCase(),
+                      style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.0,
@@ -77,7 +79,7 @@ class SharedTimelineWidget extends StatelessWidget {
                   userName:
                       activity.userId == 'system' ||
                           activity.userId == 'Unknown'
-                      ? 'System'
+                      ? LangKeys.system.tr()
                       : users[activity.userId]?.name ??
                             'User #${activity.userId.length > 4 ? activity.userId.substring(0, 4) : activity.userId}',
                   user: users[activity.userId],

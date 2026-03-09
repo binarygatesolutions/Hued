@@ -22,7 +22,9 @@ extension ThemeExt on BuildContext {
   Color get dividerColor => theme.dividerColor;
 
   // Brand Colors
-  Color get mintGreen => const Color(0xFF6EFE99);
+  Color get mintGreen => theme.brightness == Brightness.dark
+      ? const Color(0xFF6EFE99)
+      : Colors.green;
   Color get limeYellow => const Color(0xFFE9E141);
   Color get purple => const Color(0xFF7B2CBF);
 }

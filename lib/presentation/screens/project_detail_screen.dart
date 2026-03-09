@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ionicons/ionicons.dart';
@@ -7,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/localization/lang_keys.dart';
 import '../../core/utils/animations.dart';
+import '../../core/utils/haptics_service.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/entities.dart';
 import '../blocs/auth_bloc.dart';
@@ -113,16 +113,6 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     _refreshController.refreshCompleted();
   }
 
-  void _navigateToManageUsers(
-    BuildContext context,
-    ProjectEntity currentProject,
-  ) {
-    context.push(
-      '/project/${currentProject.id}/manage-users',
-      extra: currentProject,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocListener<ProjectBloc, ProjectState>(
@@ -191,10 +181,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         ),
                         floatingActionButton: user.role != UserRole.worker
                             ? FloatingActionButton.extended(
-                                onPressed: () => context.push(
-                                  '/project/${currentProject.id}/add-task',
-                                  extra: currentProject,
-                                ),
+                                onPressed: () {
+                                  HapticsService.light();
+                                  context.push(
+                                    '/project/${currentProject.id}/add-task',
+                                    extra: currentProject,
+                                  );
+                                },
                                 backgroundColor: context.primary,
                                 icon: Icon(
                                   Ionicons.add,
@@ -207,7 +200,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ).animateScale(delayMs: 400)
+                              ).animateScale(delayMs: 600)
                             : null,
 
                         body: Stack(
@@ -256,18 +249,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   ) {
     return SharedAppBar(
       title: currentProject.title,
-      showBackButton: true,
       actions: [
-        if (user.role == UserRole.admin &&
-            (currentProject.creatorId ==
-                FirebaseAuth.instance.currentUser?.uid) &&
-            currentProject.status != ProjectStatus.finished)
-          IconButton(
-            icon: const Icon(Ionicons.people_outline),
-            onPressed: () => _navigateToManageUsers(context, currentProject),
-            tooltip: LangKeys.manageTeam.tr(),
-          ),
-
         if (currentProject.status == ProjectStatus.inProgress &&
             (user.role == UserRole.admin || user.role == UserRole.supervisor))
           IconButton(
@@ -513,19 +495,20 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                             .length,
                         totalApprovedTasks: approvedTasks.length,
                         users: users,
-                      ),
+                      ).animateEntrance(delayMs: 0),
                       const SizedBox(height: 24),
                       ProjectStatsRow(
                         totalTasks: _totalTasks,
                         activeTasks: _activeTasks,
                         doneTasks: _doneTasks,
                         project: currentProject,
-                      ),
+                      ).animateEntrance(delayMs: 100),
                       const SizedBox(height: 32),
                       ProjectStakeholderCard(
                         project: currentProject,
                         users: users,
-                      ),
+                        currentUser: user,
+                      ).animateEntrance(delayMs: 200),
                       const SizedBox(height: 32),
                       ProjectSectionHeader(
                         title: LangKeys.tasks.tr().toUpperCase(),
@@ -537,7 +520,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                                 '/project/${currentProject.id}/tasks',
                                 extra: currentProject,
                               ),
-                      ).animateEntrance(delayMs: 400),
+                      ).animateEntrance(delayMs: 300),
                       const SizedBox(height: 24),
                       if (tasks.isEmpty)
                         const EmptyTasksMessage()
@@ -594,14 +577,18 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
       return AnimatedListWrapper(
         index: index,
+        baseDelayMs: 400,
         child: TaskCard(
           task: task,
           users: users,
           isMyWorkerAssigned: isMyWorkerAssigned,
-          onTap: () => context.push(
-            '/project/${project.id}/task/${task.id}',
-            extra: project,
-          ),
+          onTap: () {
+            HapticsService.light();
+            context.push(
+              '/project/${project.id}/task/${task.id}',
+              extra: project,
+            );
+          },
         ),
       );
     }).toList();

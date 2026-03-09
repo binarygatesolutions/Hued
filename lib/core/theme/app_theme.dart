@@ -6,7 +6,7 @@ import 'app_colors.dart';
 class AppTheme {
   static String getFontFamily(String languageCode) {
     if (languageCode == 'ar') {
-      return GoogleFonts.cairo().fontFamily ?? 'Cairo';
+      return GoogleFonts.almarai().fontFamily ?? 'Almarai';
     }
     return GoogleFonts.plusJakartaSans().fontFamily ?? 'Plus Jakarta Sans';
   }

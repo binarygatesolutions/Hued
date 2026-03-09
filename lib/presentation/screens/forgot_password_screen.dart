@@ -29,9 +29,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       // it means the email was sent successfully (per AuthBloc logic).
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'Password reset email sent! Please check your inbox.',
-          ),
+          content: Text(LangKeys.passwordResetSent.tr()),
           backgroundColor: context.mintGreen,
           behavior: SnackBarBehavior.floating,
         ),

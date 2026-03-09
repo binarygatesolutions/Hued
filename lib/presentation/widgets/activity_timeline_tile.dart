@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../domain/entities/activity_entity.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/utils/activity_helper.dart';
 import '../../core/theme/theme_ext.dart';
-import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 import '../../domain/entities/entities.dart';
 import 'user_profile_sheet.dart';
@@ -111,15 +110,16 @@ class ActivityTimelineTile extends StatelessWidget {
     UserEntity? user,
   ) {
     final now = DateTime.now();
-    String? formatedDateTime;
+    String formatedDateTime;
+    final locale = context.locale.toString();
     if (time.day == now.day &&
         now.year == time.year &&
         now.month == time.month) {
-      formatedDateTime = DateFormat('HH:mm').format(time);
+      formatedDateTime = DateFormat.Hm(locale).format(time);
     } else if (now.year == time.year) {
-      formatedDateTime = DateFormat('dd/MM HH:mm').format(time);
+      formatedDateTime = DateFormat.MMMd(locale).add_Hm().format(time);
     } else {
-      formatedDateTime = DateFormat('dd/MM/yyyy HH:mm').format(time);
+      formatedDateTime = DateFormat.yMMMd(locale).add_Hm().format(time);
     }
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

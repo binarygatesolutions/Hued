@@ -261,7 +261,7 @@ class SettingsScreen extends StatelessWidget {
       ),
       trailing: onTap != null
           ? Icon(
-              Ionicons.chevron_forward,
+              Icons.arrow_forward_ios,
               size: 14,
               color: context.onSurface.withOpacity(0.15),
             )

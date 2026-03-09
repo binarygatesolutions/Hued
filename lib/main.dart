@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'core/theme/app_theme.dart';
 import 'core/navigation/app_router.dart';
+import 'core/localization/lang_keys.dart';
 import 'core/services/notification_service.dart';
 import 'core/utils/injection_container.dart';
 import 'presentation/blocs/auth_bloc.dart';
@@ -14,10 +15,6 @@ import 'presentation/blocs/theme_state.dart';
 import 'presentation/blocs/archive_bloc.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/project_repository.dart';
-
-// DEADLINE TIMER
-// CONTINUE TRANSLATION
-// MARKT @TASK CARD FOR PM THAT ONE OF HIS WORKERS IS JOINED
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,7 +79,7 @@ class _HuedAppContentState extends State<HuedAppContent> {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, state) {
         return MaterialApp.router(
-          title: 'Hued Project Management',
+          title: LangKeys.appTitle.tr(),
           debugShowCheckedModeBanner: false,
           theme: AppTheme.getLightTheme(context.locale.languageCode),
           darkTheme: AppTheme.getDarkTheme(context.locale.languageCode),

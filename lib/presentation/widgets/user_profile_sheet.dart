@@ -70,6 +70,7 @@ class UserProfileSheet extends StatelessWidget {
                 LangKeys.emailAddress.tr(),
                 user.email,
               ),
+              const SizedBox(height: 15),
               _buildDetailRow(
                 context,
                 Ionicons.id_card_outline,
@@ -122,7 +123,7 @@ class UserProfileSheet extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Text(
-        role.label.toUpperCase(),
+        LangKeys.getLocalizedRole(role).toUpperCase(),
         style: TextStyle(
           color: color,
           fontSize: 10,

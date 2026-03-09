@@ -125,7 +125,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     if (!isClient && _projectWorkers.isNotEmpty && _selectedWorkerIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please assign at least one worker to this task'),
+          content: Text(LangKeys.assignAtLeastOneWorker.tr()),
           backgroundColor: context.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -265,7 +265,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                             if (!isClient) ...[
                               const SizedBox(height: 32),
                               Text(
-                                'ASSIGN WORKERS',
+                                LangKeys.assignWorkersUpper.tr(),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
@@ -322,7 +322,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'No workers assigned to this project yet.\nAdd workers in Team Management.',
+                LangKeys.noWorkersAssigned.tr(),
                 style: TextStyle(
                   fontSize: 13,
                   color: context.onSurface.withOpacity(0.5),
@@ -493,7 +493,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    DateFormat('MMM dd, yyyy').format(_deadline),
+                    DateFormat(
+                      'MMM dd, yyyy',
+                      context.locale.toString(),
+                    ).format(_deadline),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,

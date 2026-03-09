@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hued/core/theme/theme_ext.dart';
+import 'package:hued/core/utils/haptics_service.dart';
 
 class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -29,7 +30,10 @@ class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
           (showBackButton && Navigator.of(context).canPop()
               ? IconButton(
                   icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () {
+                    HapticsService.light();
+                    Navigator.of(context).pop();
+                  },
                 )
               : null),
       actions: [if (actions != null) ...actions!, const SizedBox(width: 8)],

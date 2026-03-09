@@ -8,6 +8,8 @@ import 'package:ionicons/ionicons.dart';
 import 'package:pull_to_refresh_flutter3/pull_to_refresh_flutter3.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:easy_localization/easy_localization.dart';
+import '../../core/localization/lang_keys.dart';
 import '../../core/theme/theme_ext.dart';
 import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
@@ -120,7 +122,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           return Scaffold(
             backgroundColor: context.background,
             appBar: SharedAppBar(
-              title: 'Analytics',
+              title: LangKeys.analytics.tr(),
               showBackButton: false,
               leading: const Padding(
                 padding: EdgeInsets.all(12.0),
@@ -184,7 +186,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, 'Core Metrics'),
+        _buildSectionTitle(context, LangKeys.coreMetrics.tr()),
         const SizedBox(height: 16),
         GridView.count(
           crossAxisCount: isMobile ? 2 : 4,
@@ -195,7 +197,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           children: [
             _buildMetricCard(
               context,
-              'Completed',
+              LangKeys.taskStatusCompleted.tr(),
               '$completed',
               context.mintGreen,
               Ionicons.checkmark_done_circle_outline,
@@ -203,7 +205,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             ),
             _buildMetricCard(
               context,
-              'In Progress',
+              LangKeys.taskStatusInProgress.tr(),
               '$inProgress',
               context.primary,
               Ionicons.sync_circle_outline,
@@ -212,7 +214,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
             _buildMetricCard(
               context,
-              'Cancelled',
+              LangKeys.taskStatusCancelled.tr(),
               '$cancelled',
               context.error,
               Ionicons.close_circle_outline,
@@ -233,7 +235,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, 'Core Insights'),
+        _buildSectionTitle(context, LangKeys.coreInsights.tr()),
         const SizedBox(height: 7),
         GlassContainer(
           borderRadius: 32,
@@ -242,34 +244,44 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             children: [
               _buildInsightRow(
                 context,
-                'Project Completion',
+                LangKeys.projectCompletion.tr(),
                 '$projectCompletion%',
                 context.primary,
               ),
 
               _buildInsightRow(
                 context,
-                'Active Projects',
+                LangKeys.activeProjectsCount.tr(),
                 '${totalProjectsCount - completed - cancelled}',
                 context.purple,
               ),
               SizedBox(height: 5),
               _buildDivider(context),
               SizedBox(height: 5),
-              _buildInsightRow(context, 'Admins', '$admins', context.primary),
               _buildInsightRow(
                 context,
-                'Supervisors',
+                LangKeys.roleAdmin.tr(),
+                '$admins',
+                context.primary,
+              ),
+              _buildInsightRow(
+                context,
+                LangKeys.supervisors.tr(),
                 '$superivsors',
                 context.primary,
               ),
               _buildInsightRow(
                 context,
-                'Project Managers',
+                LangKeys.projectManagers.tr(),
                 '$managers',
                 context.primary,
               ),
-              _buildInsightRow(context, 'Clients', '$clients', context.primary),
+              _buildInsightRow(
+                context,
+                LangKeys.clientsExternal.tr(),
+                '$clients',
+                context.primary,
+              ),
             ],
           ),
         ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
@@ -378,8 +390,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             const SizedBox(width: 12),
             Text(
               _selectedDateRange == null
-                  ? 'All Time'
-                  : '${DateFormat('MMM d').format(_selectedDateRange!.start)} - ${DateFormat('MMM d').format(_selectedDateRange!.end)}',
+                  ? LangKeys.allTime.tr()
+                  : '${DateFormat('MMM d', context.locale.toString()).format(_selectedDateRange!.start)} - ${DateFormat('MMM d', context.locale.toString()).format(_selectedDateRange!.end)}',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: context.onSurface,
@@ -401,7 +413,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, 'Visual Analytics'),
+        _buildSectionTitle(context, LangKeys.visualAnalytics.tr()),
         const SizedBox(height: 16),
         if (isMobile) ...[
           _buildStatusPieChart(context),
@@ -427,8 +439,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          const Text(
-            'Project Status',
+          Text(
+            LangKeys.projectStatus.tr(),
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 24),
@@ -437,7 +449,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             child: total == 0
                 ? Center(
                     child: Text(
-                      'No data',
+                      LangKeys.noData.tr(),
                       style: TextStyle(
                         color: context.onSurface.withOpacity(0.3),
                       ),
@@ -495,9 +507,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: [
-        _legendItem(context, 'Done', context.mintGreen),
-        _legendItem(context, 'Active', context.primary),
-        _legendItem(context, 'Canceled', context.error),
+        _legendItem(
+          context,
+          LangKeys.taskStatusCompleted.tr(),
+          context.mintGreen,
+        ),
+        _legendItem(context, LangKeys.active.tr(), context.primary),
+        _legendItem(context, LangKeys.taskStatusCancelled.tr(), context.error),
       ],
     );
   }
@@ -538,8 +554,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          const Text(
-            'User Roles Distribution',
+          Text(
+            LangKeys.userRolesDistribution.tr(),
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 32),
@@ -563,16 +579,16 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         String text;
                         switch (value.toInt()) {
                           case 0:
-                            text = 'Adm';
+                            text = LangKeys.roleAdmShort.tr();
                             break;
                           case 1:
-                            text = 'Sup';
+                            text = LangKeys.roleSupShort.tr();
                             break;
                           case 2:
-                            text = 'PM';
+                            text = LangKeys.rolePmShort.tr();
                             break;
                           case 3:
-                            text = 'Cli';
+                            text = LangKeys.roleCliShort.tr();
                             break;
                           default:
                             text = '';

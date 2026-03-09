@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/theme_ext.dart';
+import '../../core/utils/haptics_service.dart';
 
 class PremiumCard extends StatelessWidget {
   final Widget child;
@@ -46,7 +47,12 @@ class PremiumCard extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: onTap,
+            onTap: onTap != null
+                ? () {
+                    HapticsService.light();
+                    onTap!();
+                  }
+                : null,
             highlightColor: context.primary.withOpacity(0.05),
             splashColor: context.primary.withOpacity(0.1),
             child: Padding(

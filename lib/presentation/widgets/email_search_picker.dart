@@ -228,7 +228,10 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
                       LangKeys.filteredFor.tr(
                         args: [
                           widget.filterRoles!
-                              .map((r) => r.label.toUpperCase())
+                              .map(
+                                (r) =>
+                                    LangKeys.getLocalizedRole(r).toUpperCase(),
+                              )
                               .join(', '),
                         ],
                       ),

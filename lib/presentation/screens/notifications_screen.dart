@@ -59,11 +59,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   // ── Helpers ───────────────────────────────────────────────────────────────
   String _formatTime(DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 60) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return DateFormat('MMM d, yyyy').format(dt);
+    if (diff.inSeconds < 60) return LangKeys.now.tr();
+    if (diff.inMinutes < 60)
+      return '${diff.inMinutes}${LangKeys.minutesShort.tr()}';
+    if (diff.inHours < 24) return '${diff.inHours}${LangKeys.hoursShort.tr()}';
+    if (diff.inDays < 7) return '${diff.inDays}${LangKeys.daysShort.tr()}';
+    return DateFormat('MMM d, yyyy', context.locale.toString()).format(dt);
   }
 
   _NotifStyle _styleFor(String type) {

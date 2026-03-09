@@ -102,9 +102,7 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
         if (pmId == null || !_managerIds.contains(pmId)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text(
-                'Please assign a valid Project Manager for every worker.',
-              ),
+              content: Text(LangKeys.assignPmToWorker.tr()),
               backgroundColor: context.error,
               behavior: SnackBarBehavior.floating,
             ),
@@ -357,12 +355,12 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
                     if (_workerIds.isNotEmpty && _managerIds.isNotEmpty) ...[
                       const SizedBox(height: 40),
                       _buildSectionHeader(
-                        'Workers',
+                        LangKeys.workers.tr(),
                         Ionicons.construct_outline,
                       ).animateEntrance(delayMs: 700),
                       const SizedBox(height: 20),
                       _buildPickerWithLabel(
-                        label: 'Workers',
+                        label: LangKeys.workers.tr(),
                         ids: _workerIds,
                         role: UserRole.worker,
                         onChanged: (ids) => setState(() {
@@ -372,7 +370,7 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
                       ).animateEntrance(delayMs: 800),
                       const SizedBox(height: 32),
                       _buildSectionHeader(
-                        'Worker Assignments',
+                        LangKeys.workerAssignments.tr(),
                         Ionicons.git_branch_outline,
                       ).animateEntrance(delayMs: 900),
                       const SizedBox(height: 16),
@@ -562,7 +560,7 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
           (u) => u.id == workerId,
           orElse: () => UserEntity(
             id: workerId,
-            name: 'Unknown Worker',
+            name: LangKeys.unknownWorker.tr(),
             email: '',
             role: UserRole.worker,
             profile: '',
@@ -607,7 +605,7 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
                       ),
                     ),
                     Text(
-                      'Worker',
+                      LangKeys.getLocalizedRole(worker.role),
                       style: TextStyle(
                         fontSize: 10,
                         color: context.onSurface.withOpacity(0.4),
@@ -627,7 +625,7 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
                 child: DropdownButton<String>(
                   value: isValidManager ? assignedManagerId : null,
                   hint: Text(
-                    'Select PM',
+                    LangKeys.selectPm.tr(),
                     style: TextStyle(fontSize: 12, color: context.error),
                   ),
                   icon: Icon(

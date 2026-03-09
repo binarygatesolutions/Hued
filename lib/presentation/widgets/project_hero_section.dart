@@ -105,7 +105,7 @@ class ProjectHeroSection extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '· ${DateFormat('MMM dd, yyyy').format(project.createdAt)}',
+                        '· ${DateFormat.yMMMd(context.locale.toString()).format(project.createdAt)}',
                         style: TextStyle(
                           color: context.onSurface.withOpacity(0.35),
                           fontSize: 10,
