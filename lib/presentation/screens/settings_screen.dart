@@ -129,6 +129,24 @@ class SettingsScreen extends StatelessWidget {
                           GlassContainer(
                             child: Column(
                               children: [
+                                _buildSettingTile(
+                                  context,
+                                  icon: Ionicons.archive_outline,
+                                  title: LangKeys.archivedProjects.tr(),
+                                  subtitle: LangKeys.archivedProjectsSubtitle
+                                      .tr(),
+                                  accentColor: context.mintGreen,
+                                  onTap: () => context.pushNamed(
+                                    AppRouter.archivedProjects,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                          GlassContainer(
+                            child: Column(
+                              children: [
                                 _buildLinkTile(
                                   context,
                                   icon: Ionicons.information_circle_outline,
@@ -361,12 +379,6 @@ class SettingsScreen extends StatelessWidget {
         return LangKeys.arabic.tr();
       case 'en':
         return LangKeys.english.tr();
-      case 'es':
-        return LangKeys.spanish.tr();
-      case 'fr':
-        return LangKeys.french.tr();
-      case 'de':
-        return LangKeys.german.tr();
       default:
         return code;
     }
@@ -462,13 +474,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showLanguagePicker(BuildContext context) {
-    final locales = [
-      const Locale('en'),
-      const Locale('ar'),
-      const Locale('es'),
-      const Locale('fr'),
-      const Locale('de'),
-    ];
+    final locales = [const Locale('en'), const Locale('ar')];
 
     showModalBottomSheet(
       context: context,

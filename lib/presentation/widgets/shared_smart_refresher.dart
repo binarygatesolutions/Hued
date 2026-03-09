@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hued/presentation/widgets/custom_loading.dart';
 import 'package:pull_to_refresh_flutter3/pull_to_refresh_flutter3.dart';
 
 class SharedSmartRefresher extends StatelessWidget {
@@ -43,11 +44,7 @@ class SharedSmartRefresher extends StatelessWidget {
           if (mode == LoadStatus.idle) {
             body = const Text("");
           } else if (mode == LoadStatus.loading) {
-            body = const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            );
+            body = CustomLoading(size: 20);
           } else if (mode == LoadStatus.failed) {
             body = const Text("Load Failed! Click retry!");
           } else if (mode == LoadStatus.canLoading) {

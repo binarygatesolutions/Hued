@@ -1,8 +1,9 @@
 import 'package:equatable/equatable.dart';
 export 'attachment_entity.dart';
 export 'activity_entity.dart';
+export 'request_entity.dart';
 
-enum UserRole { admin, supervisor, projectManager, client }
+enum UserRole { admin, supervisor, projectManager, client, worker }
 
 extension UserRoleX on UserRole {
   String get label {
@@ -15,6 +16,8 @@ extension UserRoleX on UserRole {
         return 'Project Manager';
       case UserRole.client:
         return 'Client';
+      case UserRole.worker:
+        return 'Worker';
     }
   }
 }
@@ -25,6 +28,8 @@ class UserEntity extends Equatable {
   final String email;
   final UserRole role;
   final String? profile;
+  final String? specialtyId;
+  final String? specialtyName;
 
   const UserEntity({
     required this.id,
@@ -32,6 +37,8 @@ class UserEntity extends Equatable {
     required this.email,
     required this.role,
     required this.profile,
+    this.specialtyId,
+    this.specialtyName,
   });
 
   UserEntity copyWith({
@@ -47,6 +54,8 @@ class UserEntity extends Equatable {
       email: email ?? this.email,
       role: role ?? this.role,
       profile: profile ?? this.profile,
+      specialtyId: specialtyId ?? this.specialtyId,
+      specialtyName: specialtyName ?? this.specialtyName,
     );
   }
 
@@ -57,6 +66,8 @@ class UserEntity extends Equatable {
       'email': email,
       'role': role.name,
       'profile': profile,
+      'specialtyId': specialtyId,
+      'specialtyName': specialtyName,
     };
   }
 
@@ -67,11 +78,39 @@ class UserEntity extends Equatable {
       email: json['email'],
       role: UserRole.values.firstWhere((e) => e.name == json['role']),
       profile: json['profile'],
+      specialtyId: json['specialtyId'],
+      specialtyName: json['specialtyName'],
     );
   }
 
   @override
-  List<Object?> get props => [id, name, email, role];
+  List<Object?> get props => [
+    id,
+    name,
+    email,
+    role,
+    profile,
+    specialtyId,
+    specialtyName,
+  ];
+}
+
+class SpecialtyEntity extends Equatable {
+  final String id;
+  final String name;
+
+  const SpecialtyEntity({required this.id, required this.name});
+
+  factory SpecialtyEntity.fromJson(Map<String, dynamic> json) {
+    return SpecialtyEntity(id: json['id'] ?? '', name: json['name'] ?? '');
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'name': name};
+  }
+
+  @override
+  List<Object?> get props => [id, name];
 }
 
 enum TaskStatus { pending, inProgress, completed, cancelled }
@@ -89,6 +128,8 @@ class TaskEntity extends Equatable {
   final DateTime createdAt;
   final String creatorId;
   final bool isApproved;
+  final List<String> assignedWorkerIds;
+  final DateTime? completedAt;
 
   const TaskEntity({
     required this.id,
@@ -101,6 +142,8 @@ class TaskEntity extends Equatable {
     required this.createdAt,
     required this.creatorId,
     this.isApproved = false,
+    this.assignedWorkerIds = const [],
+    this.completedAt,
   });
 
   TaskEntity copyWith({
@@ -114,6 +157,8 @@ class TaskEntity extends Equatable {
     DateTime? createdAt,
     String? creatorId,
     bool? isApproved,
+    List<String>? assignedWorkerIds,
+    DateTime? completedAt,
   }) {
     return TaskEntity(
       id: id ?? this.id,
@@ -126,6 +171,8 @@ class TaskEntity extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       creatorId: creatorId ?? this.creatorId,
       isApproved: isApproved ?? this.isApproved,
+      assignedWorkerIds: assignedWorkerIds ?? this.assignedWorkerIds,
+      completedAt: completedAt ?? this.completedAt,
     );
   }
 
@@ -141,6 +188,8 @@ class TaskEntity extends Equatable {
       'createdAt': createdAt.toIso8601String(),
       'creatorId': creatorId,
       'isApproved': isApproved,
+      'assignedWorkerIds': assignedWorkerIds,
+      'completedAt': completedAt?.toIso8601String(),
     };
   }
 
@@ -166,6 +215,12 @@ class TaskEntity extends Equatable {
           : (json['createdAt'] as dynamic).toDate(),
       creatorId: json['creatorId'] ?? '',
       isApproved: json['isApproved'] ?? false,
+      assignedWorkerIds: List<String>.from(json['assignedWorkerIds'] ?? []),
+      completedAt: json['completedAt'] != null
+          ? (json['completedAt'] is String
+                ? DateTime.parse(json['completedAt'])
+                : (json['completedAt'] as dynamic).toDate())
+          : null,
     );
   }
 
@@ -181,10 +236,12 @@ class TaskEntity extends Equatable {
     createdAt,
     creatorId,
     isApproved,
+    assignedWorkerIds,
+    completedAt,
   ];
 }
 
-enum ProjectStatus { inProgress, canceled, finished }
+enum ProjectStatus { inProgress, canceled, finished, archived }
 
 class ProjectEntity extends Equatable {
   final String id;
@@ -195,6 +252,8 @@ class ProjectEntity extends Equatable {
   final List<String> managerIds;
   final List<String> clientIds;
   final List<String> assignedUserIds;
+  final List<String> workerIds;
+  final Map<String, String> workerManagerMap;
   final ProjectStatus status;
   final DateTime createdAt;
 
@@ -207,6 +266,8 @@ class ProjectEntity extends Equatable {
     required this.creatorId,
     required this.clientIds,
     required this.assignedUserIds,
+    required this.workerIds,
+    this.workerManagerMap = const {},
     required this.status,
     required this.createdAt,
   });
@@ -220,6 +281,8 @@ class ProjectEntity extends Equatable {
     List<String>? managerIds,
     List<String>? clientIds,
     List<String>? assignedUserIds,
+    List<String>? workerIds,
+    Map<String, String>? workerManagerMap,
     ProjectStatus? status,
     DateTime? createdAt,
   }) {
@@ -232,6 +295,8 @@ class ProjectEntity extends Equatable {
       managerIds: managerIds ?? this.managerIds,
       clientIds: clientIds ?? this.clientIds,
       assignedUserIds: assignedUserIds ?? this.assignedUserIds,
+      workerIds: workerIds ?? this.workerIds,
+      workerManagerMap: workerManagerMap ?? this.workerManagerMap,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -247,6 +312,8 @@ class ProjectEntity extends Equatable {
       'managerIds': managerIds,
       'clientIds': clientIds,
       'assignedUserIds': assignedUserIds,
+      'workerIds': workerIds,
+      'workerManagerMap': workerManagerMap,
       'status': status.name,
       'createdAt': createdAt.toIso8601String(),
     };
@@ -262,6 +329,10 @@ class ProjectEntity extends Equatable {
       managerIds: List<String>.from(json['managerIds'] ?? []),
       clientIds: List<String>.from(json['clientIds'] ?? []),
       assignedUserIds: List<String>.from(json['assignedUserIds'] ?? []),
+      workerIds: List<String>.from(json['workerIds'] ?? []),
+      workerManagerMap: Map<String, String>.from(
+        json['workerManagerMap'] ?? {},
+      ),
       status: ProjectStatus.values.firstWhere(
         (e) => e.name == json['status'],
         orElse: () => ProjectStatus.inProgress,
@@ -282,6 +353,8 @@ class ProjectEntity extends Equatable {
     managerIds,
     clientIds,
     assignedUserIds,
+    workerIds,
+    workerManagerMap,
     status,
     createdAt,
   ];

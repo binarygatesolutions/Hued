@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hued/presentation/widgets/shared_app_bar.dart';
@@ -13,15 +14,17 @@ import '../../domain/entities/entities.dart';
 import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
 import '../blocs/project_bloc.dart';
+import '../blocs/project_state.dart';
 import '../blocs/project_event.dart';
 import '../widgets/shared_text_field.dart';
+import '../widgets/email_search_picker.dart';
 import '../widgets/shared_button.dart';
 import 'package:hued/core/utils/animations.dart';
 
 class AddTaskScreen extends StatefulWidget {
-  final String projectId;
+  final ProjectEntity project;
 
-  const AddTaskScreen({super.key, required this.projectId});
+  const AddTaskScreen({super.key, required this.project});
 
   @override
   State<AddTaskScreen> createState() => _AddTaskScreenState();
@@ -34,6 +37,48 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   TaskPriority _priority = TaskPriority.medium;
   DateTime _deadline = DateTime.now().add(const Duration(days: 7));
+  bool _isSubmitting = false;
+
+  // Worker selection — only for non-client roles
+  List<UserEntity> _projectWorkers = [];
+  List<String> _selectedWorkerIds = [];
+  bool _loadingWorkers = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProjectWorkers();
+  }
+
+  Future<void> _loadProjectWorkers() async {
+    final workerIds = widget.project.workerIds;
+    if (workerIds.isEmpty) return;
+
+    setState(() => _loadingWorkers = true);
+    final List<UserEntity> workers = [];
+    for (var i = 0; i < workerIds.length; i += 10) {
+      final chunk = workerIds.sublist(
+        i,
+        (i + 10 > workerIds.length) ? workerIds.length : i + 10,
+      );
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+        for (var doc in snap.docs) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          workers.add(UserEntity.fromJson(data));
+        }
+      } catch (_) {}
+    }
+    if (mounted)
+      setState(() {
+        _projectWorkers = workers;
+        _loadingWorkers = false;
+      });
+  }
 
   @override
   void dispose() {
@@ -68,136 +113,238 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      final authState = context.read<AuthBloc>().state;
-      bool isApproved = true;
+    if (!_formKey.currentState!.validate()) return;
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated) return;
 
-      if (authState is Authenticated) {
-        if (authState.user.role == UserRole.client) {
-          isApproved = false;
-        }
-      }
+    final role = authState.user.role;
+    final isClient = role == UserRole.client;
+    final bool isApproved = !isClient;
 
-      context.read<ProjectBloc>().add(
-        AddTask(
-          projectId: widget.projectId,
-          title: _titleController.text,
-          description: _descriptionController.text,
-          deadline: _deadline,
-          priority: _priority.name,
-          isApproved: isApproved,
-          creatorId: authState is Authenticated ? authState.user.id : 'Unknown',
+    // Non-clients must assign at least one worker (if any workers exist on project)
+    if (!isClient && _projectWorkers.isNotEmpty && _selectedWorkerIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please assign at least one worker to this task'),
+          backgroundColor: context.error,
+          behavior: SnackBarBehavior.floating,
         ),
       );
-      context.pop();
+      return;
     }
+
+    setState(() => _isSubmitting = true);
+    context.read<ProjectBloc>().add(
+      AddTask(
+        projectId: widget.project.id,
+        title: _titleController.text,
+        description: _descriptionController.text,
+        deadline: _deadline,
+        priority: _priority.name,
+        isApproved: isApproved,
+        creatorId: authState.user.id,
+        assignedWorkerIds: _selectedWorkerIds,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.background,
-      extendBodyBehindAppBar: true,
-      appBar: SharedAppBar(title: LangKeys.addTask.tr()),
-      body: Stack(
-        children: [
-          _buildBackground(context),
-          SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 130),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 500),
-                  child: Container(
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: context.surface,
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(
-                        color: context.onSurface.withOpacity(0.05),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 40,
-                          offset: const Offset(0, 20),
+    final authState = context.read<AuthBloc>().state;
+    final isClient =
+        authState is Authenticated && authState.user.role == UserRole.client;
+
+    return BlocListener<ProjectBloc, ProjectState>(
+      listener: (context, state) {
+        if (_isSubmitting && state is ProjectInitial) {
+          context.pop();
+        } else if (state is ProjectError) {
+          setState(() => _isSubmitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: context.error,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: context.background,
+        extendBodyBehindAppBar: true,
+        appBar: SharedAppBar(title: LangKeys.addTask.tr()),
+        body: Stack(
+          children: [
+            _buildBackground(context),
+            SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 32,
+                vertical: 130,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: context.surface,
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(
+                          color: context.onSurface.withOpacity(0.05),
+                          width: 1,
                         ),
-                      ],
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            LangKeys.taskDetails.tr(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.2,
-                              color: context.onSurface.withOpacity(0.4),
-                            ),
-                          ).animateEntrance(delayMs: 400),
-                          const SizedBox(height: 24),
-                          SharedTextField(
-                            controller: _titleController,
-                            label: LangKeys.taskTitle.tr(),
-                            icon: Ionicons.checkbox_outline,
-                            validator: (v) => v?.isEmpty ?? true
-                                ? LangKeys.required.tr()
-                                : null,
-                          ).animateEntrance(delayMs: 500),
-                          const SizedBox(height: 20),
-                          SharedTextField(
-                            controller: _descriptionController,
-                            label: LangKeys.description.tr(),
-                            icon: Ionicons.document_text_outline,
-                            maxLines: 3,
-                            validator: (v) => v?.isEmpty ?? true
-                                ? LangKeys.required.tr()
-                                : null,
-                          ).animateEntrance(delayMs: 600),
-                          const SizedBox(height: 32),
-                          Text(
-                            LangKeys.timelineAndUrgency.tr(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.2,
-                              color: context.onSurface.withOpacity(0.4),
-                            ),
-                          ).animateEntrance(delayMs: 700),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildPrioritySelector().animateEntrance(
-                                  delayMs: 800,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildDeadlinePicker().animateEntrance(
-                                  delayMs: 800,
-                                ),
-                              ),
-                            ],
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 40,
+                            offset: const Offset(0, 20),
                           ),
                         ],
                       ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              LangKeys.taskDetails.tr(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.2,
+                                color: context.onSurface.withOpacity(0.4),
+                              ),
+                            ).animateEntrance(delayMs: 400),
+                            const SizedBox(height: 24),
+                            SharedTextField(
+                              controller: _titleController,
+                              label: LangKeys.taskTitle.tr(),
+                              icon: Ionicons.checkbox_outline,
+                              validator: (v) => v?.isEmpty ?? true
+                                  ? LangKeys.required.tr()
+                                  : null,
+                            ).animateEntrance(delayMs: 500),
+                            const SizedBox(height: 20),
+                            SharedTextField(
+                              controller: _descriptionController,
+                              label: LangKeys.description.tr(),
+                              icon: Ionicons.document_text_outline,
+                              maxLines: 3,
+                              validator: (v) => v?.isEmpty ?? true
+                                  ? LangKeys.required.tr()
+                                  : null,
+                            ).animateEntrance(delayMs: 600),
+                            const SizedBox(height: 32),
+                            Text(
+                              LangKeys.timelineAndUrgency.tr(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.2,
+                                color: context.onSurface.withOpacity(0.4),
+                              ),
+                            ).animateEntrance(delayMs: 700),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildPrioritySelector()
+                                      .animateEntrance(delayMs: 800),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildDeadlinePicker().animateEntrance(
+                                    delayMs: 800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // Worker assignment section — hidden for clients
+                            if (!isClient) ...[
+                              const SizedBox(height: 32),
+                              Text(
+                                'ASSIGN WORKERS',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.2,
+                                  color: context.onSurface.withOpacity(0.4),
+                                ),
+                              ).animateEntrance(delayMs: 900),
+                              const SizedBox(height: 16),
+                              _buildWorkerPicker(
+                                context,
+                              ).animateEntrance(delayMs: 950),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ).animateScale(delayMs: 400),
-                const SizedBox(height: 48),
-                _buildSubmitButton(context).animateEntrance(delayMs: 900),
-              ],
+                  ).animateScale(delayMs: 400),
+                  const SizedBox(height: 48),
+                  _buildSubmitButton(context).animateEntrance(delayMs: 1000),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildWorkerPicker(BuildContext context) {
+    if (_loadingWorkers) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_projectWorkers.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.onSurface.withOpacity(0.03),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: context.onSurface.withOpacity(0.06)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Ionicons.information_circle_outline,
+              size: 18,
+              color: context.onSurface.withOpacity(0.4),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'No workers assigned to this project yet.\nAdd workers in Team Management.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: context.onSurface.withOpacity(0.5),
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return MultiEmailSearchPicker(
+      label: LangKeys.assignWorkers.tr(),
+      initialUsers: _projectWorkers,
+      initialSelectedIds: _selectedWorkerIds,
+      filterRoles: const [UserRole.worker],
+      onChanged: (selected) {
+        setState(() {
+          _selectedWorkerIds = List.from(selected);
+        });
+      },
     );
   }
 
@@ -249,6 +396,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       onPressed: _submitForm,
       text: LangKeys.createTask.tr(),
       showShadow: true,
+      disabled: _selectedWorkerIds.isEmpty,
       textStyle: const TextStyle(
         color: Colors.white,
         fontWeight: FontWeight.w900,

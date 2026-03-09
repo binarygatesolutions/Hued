@@ -46,6 +46,40 @@ class ActivityHelper {
         title = LangKeys.projectMembersChanged.tr();
         subtitle = LangKeys.byUser.tr(args: [userName]);
         break;
+      case ActivityType.requestCreated:
+        // activity.content format: "taskStatus|targetStatus" or "projectStatus|targetStatus"
+        final parts = activity.content.split('|');
+        final type = parts[0];
+        final status = parts.length > 1 ? parts[1] : '';
+        title = LangKeys.requestCreatedLog.tr(
+          args: [
+            type == 'taskStatus'
+                ? LangKeys.taskStatus.tr()
+                : LangKeys.projectStatus.tr(),
+            status,
+          ],
+        );
+        subtitle = LangKeys.byUser.tr(args: [userName]);
+        break;
+      case ActivityType.requestApprovedStep:
+        // activity.content format: "stepName|type"
+        final parts = activity.content.split('|');
+        final step = parts[0];
+        final type = parts.length > 1 ? parts[1] : '';
+        title = LangKeys.requestApprovedStepLog.tr(
+          args: [
+            step.toUpperCase(),
+            type == 'taskStatus'
+                ? LangKeys.taskStatus.tr()
+                : LangKeys.projectStatus.tr(),
+          ],
+        );
+        subtitle = LangKeys.byUser.tr(args: [userName]);
+        break;
+      case ActivityType.requestRejected:
+        title = LangKeys.requestRejectedLog.tr();
+        subtitle = LangKeys.rejectionReasonLog.tr(args: [activity.content]);
+        break;
       case ActivityType.comment:
         title = userName;
         subtitle = activity.content;

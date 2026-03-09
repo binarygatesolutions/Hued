@@ -20,8 +20,12 @@ import '../../presentation/screens/add_project_screen.dart';
 import '../../presentation/screens/manage_project_users_screen.dart';
 import '../../presentation/screens/timeline_screen.dart';
 import '../../presentation/screens/splash_screen.dart';
+import '../../presentation/screens/archived_projects_screen.dart';
+import '../../presentation/screens/project_tasks_screen.dart';
+import '../../presentation/screens/manage_specialties_screen.dart';
 import '../../presentation/widgets/main_shell.dart';
 import '../../presentation/blocs/activity_bloc.dart';
+import '../../presentation/blocs/specialty_bloc.dart';
 import '../../presentation/blocs/sync_bloc.dart';
 import '../../presentation/blocs/sync_event.dart';
 import '../../core/utils/injection_container.dart';
@@ -44,6 +48,8 @@ class AppRouter {
   static const String updateProfile = 'updateProfile';
   static const String notifications = 'notifications';
   static const String manageUsers = 'manage-users';
+  static const String archivedProjects = 'archived-projects';
+  static const String manageSpecialties = 'manage-specialties';
   // static const String allProjects = 'all-projects';
 
   static GoRouter createRouter(AuthBloc authBloc) {
@@ -60,18 +66,23 @@ class AppRouter {
 
         // 1. While determining auth status, stay on splash
         if (authState is AuthInitial || authState is AuthLoading) {
+          // If we are already on a non-auth, non-splash page, stay there (e.g., during profile updates)
+          if (!isSplash && !isAuthRoute) return null;
           return isSplash ? null : '/splash';
         }
 
         // 2. Not Authenticated
-        if (authState is! Authenticated) {
+        if (authState is Unauthenticated || authState is AuthError) {
           if (isSplash) return '/'; // Go from splash to login
           return isAuthRoute ? null : '/';
         }
 
-        // 3. Authenticated
-        if (isSplash || isAuthRoute) {
-          return '/dashboard';
+        // 3. Authenticated or Updating Profile
+        if (authState is Authenticated || authState is AuthUpdatingProfile) {
+          if (isSplash || isAuthRoute) {
+            return '/dashboard';
+          }
+          return null;
         }
 
         return null;
@@ -90,7 +101,10 @@ class AppRouter {
         GoRoute(
           path: '/register',
           name: register,
-          builder: (context, state) => const RegisterScreen(),
+          builder: (context, state) => BlocProvider(
+            create: (context) => sl<SpecialtyBloc>()..add(LoadSpecialties()),
+            child: const RegisterScreen(),
+          ),
         ),
         GoRoute(
           path: '/forgot-password',
@@ -137,8 +151,11 @@ class AppRouter {
                 GoRoute(
                   path: '/admin/users',
                   name: adminUsers,
-                  builder: (context, state) =>
-                      const AdminUserManagementScreen(),
+                  builder: (context, state) => BlocProvider(
+                    create: (context) =>
+                        sl<SpecialtyBloc>()..add(LoadSpecialties()),
+                    child: const AdminUserManagementScreen(),
+                  ),
                 ),
               ],
             ),
@@ -153,6 +170,21 @@ class AppRouter {
                       path: 'profile',
                       name: updateProfile,
                       builder: (context, state) => const UpdateProfileScreen(),
+                    ),
+                    GoRoute(
+                      path: 'archives',
+                      name: archivedProjects,
+                      builder: (context, state) =>
+                          const ArchivedProjectsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'specialties',
+                      name: manageSpecialties,
+                      builder: (context, state) => BlocProvider(
+                        create: (context) =>
+                            sl<SpecialtyBloc>()..add(LoadSpecialties()),
+                        child: const ManageSpecialtiesScreen(),
+                      ),
                     ),
                   ],
                 ),
@@ -185,11 +217,19 @@ class AppRouter {
           },
           routes: [
             GoRoute(
+              path: 'tasks',
+              name: 'project-tasks',
+              builder: (context, state) {
+                final project = state.extra as ProjectEntity;
+                return ProjectTasksScreen(project: project);
+              },
+            ),
+            GoRoute(
               path: 'add-task',
               name: addTask,
               builder: (context, state) {
-                final projectId = state.pathParameters['id']!;
-                return AddTaskScreen(projectId: projectId);
+                final project = state.extra as ProjectEntity;
+                return AddTaskScreen(project: project);
               },
             ),
             GoRoute(

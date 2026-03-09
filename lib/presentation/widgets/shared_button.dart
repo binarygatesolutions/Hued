@@ -15,6 +15,7 @@ class SharedButton extends StatelessWidget {
   final bool isLoading;
   final bool showShadow;
   final EdgeInsetsGeometry? padding;
+  final bool disabled;
 
   const SharedButton({
     super.key,
@@ -30,15 +31,18 @@ class SharedButton extends StatelessWidget {
     this.textStyle,
     this.isLoading = false,
     this.showShadow = false,
+    this.disabled = false,
     this.padding,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = backgroundColor ?? context.primary;
+    final bgColor = disabled
+        ? Colors.grey
+        : (backgroundColor ?? context.primary);
 
     Widget button = ElevatedButton(
-      onPressed: isLoading ? null : onPressed,
+      onPressed: isLoading || disabled ? null : onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: showShadow ? Colors.transparent : bgColor,
         shadowColor: showShadow

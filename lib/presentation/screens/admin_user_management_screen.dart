@@ -12,6 +12,8 @@ import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
 import '../widgets/custom_loading.dart';
 import '../widgets/shared_profile_avatar.dart';
+import '../blocs/specialty_bloc.dart';
+import '../../core/navigation/app_router.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/shared_app_bar.dart';
 import '../widgets/shared_app_logo.dart';
@@ -32,67 +34,176 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
   bool isLoading = false;
 
   void _showRoleChangeConfirmation(UserEntity user, UserRole newRole) {
+    // Capture the bloc BEFORE the dialog opens (different BuildContext)
+    final specialtyBloc = context.read<SpecialtyBloc>();
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.surface,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding: const EdgeInsets.all(16),
-        title: Text(
-          LangKeys.changeRole.tr(),
-          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
-        ),
-        content: Text.rich(
-          TextSpan(
-            style: TextStyle(
-              color: context.onSurface.withOpacity(0.55),
-              fontSize: 14,
-              height: 1.6,
-            ),
-            children: [
-              TextSpan(text: LangKeys.change.tr()),
-              TextSpan(
-                text: user.name,
-                style: TextStyle(
-                  color: context.onSurface,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              TextSpan(text: LangKeys.to.tr()),
-              TextSpan(
-                text: newRole.label,
-                style: TextStyle(
-                  color: context.primary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const TextSpan(text: '?'),
-            ],
+      builder: (ctx) => BlocProvider.value(
+        value: specialtyBloc,
+        child: AlertDialog(
+          backgroundColor: context.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              context.pop();
-            },
-            child: Text(
-              LangKeys.cancel.tr(),
-              style: const TextStyle(color: Colors.black),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          actionsPadding: const EdgeInsets.all(16),
+          title: Text(
+            LangKeys.changeRole.tr(),
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+          ),
+          content: Text.rich(
+            TextSpan(
+              style: TextStyle(
+                color: context.onSurface.withOpacity(0.55),
+                fontSize: 14,
+                height: 1.6,
+              ),
+              children: [
+                TextSpan(text: LangKeys.change.tr()),
+                TextSpan(
+                  text: user.name,
+                  style: TextStyle(
+                    color: context.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                TextSpan(text: LangKeys.to.tr()),
+                TextSpan(
+                  text: newRole.label,
+                  style: TextStyle(
+                    color: context.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const TextSpan(text: '?'),
+              ],
             ),
           ),
-          TextButton(
-            onPressed: () {
-              FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.id)
-                  .update({'role': newRole.name});
-              context.pop();
-            },
-            child: Text(LangKeys.yes.tr()),
-          ),
-        ],
+          actions: [
+            StatefulBuilder(
+              builder: (context, setLocalState) {
+                String? selectedSpecialtyId;
+                String? selectedSpecialtyName;
+
+                return BlocBuilder<SpecialtyBloc, SpecialtyState>(
+                  builder: (context, state) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (newRole == UserRole.worker) ...[
+                          DropdownButtonFormField<SpecialtyEntity>(
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: LangKeys.specialty.tr(),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            items: state.specialties.map((s) {
+                              return DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  s.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              selectedSpecialtyId = val?.id;
+                              selectedSpecialtyName = val?.name;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => context.pop(),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 48),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  side: BorderSide(
+                                    color: context.onSurface.withOpacity(0.15),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  LangKeys.cancel.tr(),
+                                  style: TextStyle(
+                                    color: context.onSurface.withOpacity(0.6),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  if (newRole == UserRole.worker &&
+                                      selectedSpecialtyId == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Please select a specialty",
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  final updates = {
+                                    'role': newRole.name,
+                                    if (newRole == UserRole.worker) ...{
+                                      'specialtyId': selectedSpecialtyId,
+                                      'specialtyName': selectedSpecialtyName,
+                                    } else ...{
+                                      'specialtyId': null,
+                                      'specialtyName': null,
+                                    },
+                                  };
+                                  FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(user.id)
+                                      .update(updates);
+                                  context.pop();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 48),
+                                  backgroundColor: context.primary,
+                                  foregroundColor: context.onPrimary,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  LangKeys.yes.tr(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -246,6 +357,16 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
               ),
             ],
           ),
+          const SizedBox(width: 8),
+          IconButton(
+            onPressed: () => context.pushNamed(AppRouter.manageSpecialties),
+            icon: Icon(
+              Ionicons.briefcase_outline,
+              color: context.onSurface.withOpacity(0.4),
+              size: 20,
+            ),
+            tooltip: LangKeys.specialty.tr(),
+          ),
         ],
       ),
     );
@@ -339,6 +460,32 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                     fontWeight: FontWeight.w400,
                   ),
                 ),
+                if (user.role == UserRole.worker &&
+                    user.specialtyName != null) ...[
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Icon(
+                        Ionicons.briefcase_outline,
+                        size: 11,
+                        color: context.primary.withOpacity(0.6),
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          user.specialtyName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.primary.withOpacity(0.7),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

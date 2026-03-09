@@ -37,11 +37,22 @@ class NotificationService {
     );
 
     // Get the token each time the application loads
+    _getAndSaveToken();
+
+    _messaging.onTokenRefresh.listen(_saveTokenToFirestore);
+
+    // Handle messages while the app is in the foreground
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _showForegroundNotification(message);
+    });
+  }
+
+  Future<void> _getAndSaveToken() async {
     try {
       if (Platform.isIOS) {
         String? apnsToken = await _messaging.getAPNSToken();
         if (apnsToken == null) {
-          // Wait a bit and try again
+          // Wait a bit and try again without blocking the main flow
           await Future<void>.delayed(const Duration(seconds: 3));
           apnsToken = await _messaging.getAPNSToken();
         }
@@ -57,14 +68,9 @@ class NotificationService {
           await _saveTokenToFirestore(token);
         }
       }
-    } catch (_) {}
-
-    _messaging.onTokenRefresh.listen(_saveTokenToFirestore);
-
-    // Handle messages while the app is in the foreground
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      _showForegroundNotification(message);
-    });
+    } catch (e) {
+      debugPrint("Error fetching FCM token: $e");
+    }
   }
 
   void _showForegroundNotification(RemoteMessage message) {}

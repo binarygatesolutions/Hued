@@ -10,13 +10,14 @@ class PdfService {
     required ProjectEntity project,
     required List<TaskEntity> tasks,
     required Map<String, UserEntity> users,
+    required List<RequestEntity> requests,
     bool shouldPrint = false,
   }) async {
     final pdf = pw.Document();
 
-    final font = await PdfGoogleFonts.interRegular();
-    final mediumFont = await PdfGoogleFonts.interMedium();
-    final boldFont = await PdfGoogleFonts.interBold();
+    final font = await PdfGoogleFonts.cairoRegular();
+    final mediumFont = await PdfGoogleFonts.cairoMedium();
+    final boldFont = await PdfGoogleFonts.cairoBold();
 
     final logoData = await rootBundle.load('assets/brand/foreground_icon.png');
     final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
@@ -70,7 +71,9 @@ class PdfService {
             pending: pendingTasks,
             mediumFont: mediumFont,
           ),
-          pw.SizedBox(height: 45),
+          pw.SizedBox(height: 25),
+          ..._buildRequestsSection(requests, users, mediumFont),
+          pw.SizedBox(height: 15),
           ..._buildCoolTasksSection(tasks, users, mediumFont),
         ],
         footer: (context) => _buildCoolFooter(context),
@@ -217,20 +220,67 @@ class PdfService {
               bottom: pw.BorderSide(color: PdfColors.grey100, width: 0.5),
             ),
           ),
-          child: pw.Row(
+          child: pw.Column(
             children: [
-              _coolSummaryItem('DIRECTOR', creator, mediumFont),
-              pw.SizedBox(width: 60),
-              _coolSummaryItem(
-                'REPORT ID',
-                '#HUED-${project.id.substring(0, 6).toUpperCase()}',
-                mediumFont,
+              pw.Row(
+                children: [
+                  _coolSummaryItem('DIRECTOR', creator, mediumFont),
+                  pw.SizedBox(width: 40),
+                  _coolSummaryItem(
+                    'REPORT ID',
+                    '#HUED-${project.id.substring(0, 6).toUpperCase()}',
+                    mediumFont,
+                  ),
+                  pw.Spacer(),
+                  _coolSummaryItem(
+                    'GENERATED',
+                    DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
+                    mediumFont,
+                  ),
+                ],
               ),
-              pw.Spacer(),
-              _coolSummaryItem(
-                'GENERATED',
-                DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
-                mediumFont,
+              pw.SizedBox(height: 15),
+              pw.Row(
+                children: [
+                  _coolSummaryItem(
+                    'SUPERVISORS',
+                    project.supervisorIds
+                            .map((id) => users[id]?.name ?? '-')
+                            .join(', ')
+                            .isEmpty
+                        ? '-'
+                        : project.supervisorIds
+                              .map((id) => users[id]?.name ?? '-')
+                              .join(', '),
+                    mediumFont,
+                  ),
+                  pw.SizedBox(width: 40),
+                  _coolSummaryItem(
+                    'MANAGERS',
+                    project.managerIds
+                            .map((id) => users[id]?.name ?? '-')
+                            .join(', ')
+                            .isEmpty
+                        ? '-'
+                        : project.managerIds
+                              .map((id) => users[id]?.name ?? '-')
+                              .join(', '),
+                    mediumFont,
+                  ),
+                  pw.SizedBox(width: 40),
+                  _coolSummaryItem(
+                    'CLIENTS',
+                    project.clientIds
+                            .map((id) => users[id]?.name ?? '-')
+                            .join(', ')
+                            .isEmpty
+                        ? '-'
+                        : project.clientIds
+                              .map((id) => users[id]?.name ?? '-')
+                              .join(', '),
+                    mediumFont,
+                  ),
+                ],
               ),
             ],
           ),
@@ -368,7 +418,6 @@ class PdfService {
               fontSize: 6,
               color: PdfColors.grey500,
               font: mediumFont,
-              letterSpacing: 0.5,
             ),
           ),
           pw.SizedBox(height: 6),
@@ -457,10 +506,11 @@ class PdfService {
       pw.SizedBox(height: 12),
       pw.Table(
         columnWidths: {
-          0: const pw.FlexColumnWidth(3),
-          1: const pw.FixedColumnWidth(80),
-          2: const pw.FixedColumnWidth(80),
+          0: const pw.FlexColumnWidth(2.5),
+          1: const pw.FixedColumnWidth(70),
+          2: const pw.FixedColumnWidth(70),
           3: const pw.FlexColumnWidth(1.5),
+          4: const pw.FlexColumnWidth(1.2),
         },
         children: [
           pw.TableRow(
@@ -473,6 +523,7 @@ class PdfService {
               _coolTableHeader('TASK', mediumFont),
               _coolTableHeader('STATUS', mediumFont),
               _coolTableHeader('DEADLINE', mediumFont),
+              _coolTableHeader('ASSIGNED TO', mediumFont),
               _coolTableHeader('CREATOR', mediumFont),
             ],
           ),
@@ -492,6 +543,16 @@ class PdfService {
                   font: mediumFont,
                 ),
                 _coolTableCell(DateFormat('MMM dd, yy').format(task.deadline)),
+                _coolTableCell(
+                  task.assignedWorkerIds
+                          .map((id) => users[id]?.name ?? '-')
+                          .join(', ')
+                          .isEmpty
+                      ? '-'
+                      : task.assignedWorkerIds
+                            .map((id) => users[id]?.name ?? '-')
+                            .join(', '),
+                ),
                 _coolTableCell(creator),
               ],
             );
@@ -510,7 +571,6 @@ class PdfService {
           fontSize: 6,
           color: PdfColors.grey400,
           font: mediumFont,
-          letterSpacing: 0.5,
         ),
       ),
     );
@@ -549,6 +609,64 @@ class PdfService {
         ],
       ),
     );
+  }
+
+  static List<pw.Widget> _buildRequestsSection(
+    List<RequestEntity> requests,
+    Map<String, UserEntity> users,
+    pw.Font mediumFont,
+  ) {
+    final pendingRequests = requests
+        .where((r) => r.status == RequestStatus.pending)
+        .toList();
+    if (pendingRequests.isEmpty) return [];
+
+    return [
+      pw.Text(
+        'ACTIVE APPROVAL REQUESTS',
+        style: pw.TextStyle(fontSize: 9, font: mediumFont, letterSpacing: 1),
+      ),
+      pw.SizedBox(height: 12),
+      pw.Table(
+        columnWidths: {
+          0: const pw.FlexColumnWidth(2),
+          1: const pw.FixedColumnWidth(100),
+          2: const pw.FixedColumnWidth(100),
+          3: const pw.FlexColumnWidth(1),
+        },
+        children: [
+          pw.TableRow(
+            decoration: const pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
+              ),
+            ),
+            children: [
+              _coolTableHeader('REQUEST TYPE', mediumFont),
+              _coolTableHeader('INITIATOR', mediumFont),
+              _coolTableHeader('TARGET STEP', mediumFont),
+              _coolTableHeader('DATE', mediumFont),
+            ],
+          ),
+          ...pendingRequests.map((req) {
+            final initiator = users[req.initiatorId]?.name ?? '-';
+            return pw.TableRow(
+              decoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey100, width: 0.3),
+                ),
+              ),
+              children: [
+                _coolTableCell(req.type.name.toUpperCase()),
+                _coolTableCell(initiator),
+                _coolTableCell(req.currentStep.name.toUpperCase()),
+                _coolTableCell(DateFormat('MMM dd, yy').format(req.createdAt)),
+              ],
+            );
+          }),
+        ],
+      ),
+    ];
   }
 
   static pw.Widget _buildCoolFooter(pw.Context context) {
@@ -602,6 +720,8 @@ class PdfService {
         return PdfColor.fromInt(0xFF3498DB);
       case ProjectStatus.canceled:
         return PdfColor.fromInt(0xFFE74C3C);
+      case ProjectStatus.archived:
+        return PdfColors.grey500;
     }
   }
 }

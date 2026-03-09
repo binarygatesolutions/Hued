@@ -11,9 +11,13 @@ import 'presentation/blocs/auth_event.dart';
 import 'presentation/blocs/project_bloc.dart';
 import 'presentation/blocs/theme_bloc.dart';
 import 'presentation/blocs/theme_state.dart';
-
+import 'presentation/blocs/archive_bloc.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/project_repository.dart';
+
+// DEADLINE TIMER
+// CONTINUE TRANSLATION
+// MARKT @TASK CARD FOR PM THAT ONE OF HIS WORKERS IS JOINED
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,13 +26,7 @@ void main() async {
   await sl<NotificationService>().init();
   runApp(
     EasyLocalization(
-      supportedLocales: const [
-        Locale('en'),
-        Locale('ar'),
-        Locale('es'),
-        Locale('fr'),
-        Locale('de'),
-      ],
+      supportedLocales: const [Locale('en'), Locale('ar')],
       path: 'assets/l10n',
       fallbackLocale: const Locale('en'),
       child: const HuedApp(),
@@ -52,6 +50,7 @@ class HuedApp extends StatelessWidget {
         providers: [
           BlocProvider<ThemeBloc>(create: (_) => sl<ThemeBloc>()),
           BlocProvider<ProjectBloc>(create: (_) => sl<ProjectBloc>()),
+          BlocProvider<ArchiveBloc>(create: (_) => sl<ArchiveBloc>()),
           BlocProvider<AuthBloc>(
             create: (_) => sl<AuthBloc>()..add(CheckAuthStatus()),
           ),

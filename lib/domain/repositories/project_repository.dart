@@ -8,6 +8,7 @@ abstract class ProjectRepository {
     dynamic lastDocument,
     String? userId,
     UserRole? role,
+    ProjectStatus? status,
   });
   Future<void> createProject(ProjectEntity project);
   Future<void> addTask(String projectId, TaskEntity task);
@@ -42,7 +43,14 @@ abstract class ProjectRepository {
     required List<String> supervisorIds,
     required List<String> managerIds,
     required List<String> clientIds,
+    List<String> workerIds = const [],
+    Map<String, String> workerManagerMap = const {},
   });
+  Future<void> assignWorkersToTask(
+    String projectId,
+    String taskId,
+    List<String> workerIds,
+  );
   Future<void> updateProjectStatus(String projectId, ProjectStatus status);
   Future<List<TaskEntity>> getTasks(String projectId);
 
@@ -67,5 +75,29 @@ abstract class ProjectRepository {
 
   Stream<ProjectEntity> getProjectStream(String projectId);
   Stream<TaskEntity> getTaskStream(String projectId, String taskId);
-  Stream<List<TaskEntity>> getTasksStream(String projectId);
+  Stream<List<TaskEntity>> getTasksStream(
+    String projectId, {
+    int? limit,
+    String? userId,
+    UserRole? role,
+  });
+
+  Future<({List<TaskEntity> tasks, dynamic lastDoc, bool hasMore})>
+  getPaginatedTasks(
+    String projectId, {
+    int limit = 20,
+    dynamic lastDocument,
+    TaskStatus? status,
+    String? userId,
+    UserRole? role,
+  });
+
+  Future<void> createRequest(RequestEntity request);
+  Future<void> updateRequest(RequestEntity request);
+  Stream<List<RequestEntity>> getPendingRequestsStream(String userId);
+  Stream<List<RequestEntity>> getTaskPendingRequestsStream(
+    String projectId,
+    String taskId,
+  );
+  Future<List<RequestEntity>> getProjectRequests(String projectId);
 }

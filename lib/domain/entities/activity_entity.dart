@@ -10,6 +10,9 @@ enum ActivityType {
   taskDeadlineUpdated,
   taskApproved,
   taskRejected,
+  requestCreated,
+  requestApprovedStep,
+  requestRejected,
 }
 
 class ActivityEntity extends Equatable {

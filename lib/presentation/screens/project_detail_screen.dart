@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,6 +16,7 @@ import '../blocs/project_event.dart';
 import '../blocs/activity_bloc.dart';
 import '../blocs/activity_event.dart';
 import '../blocs/activity_state.dart';
+import '../blocs/project_state.dart';
 import '../widgets/shared_app_bar.dart';
 import '../widgets/project_section_header.dart';
 import '../widgets/empty_tasks_message.dart';
@@ -23,7 +25,6 @@ import '../widgets/project_stats_row.dart';
 import '../widgets/project_stakeholder_card.dart';
 import '../widgets/task_card.dart';
 import '../widgets/animated_list_wrapper.dart';
-import '../widgets/task_filter_dropdown.dart';
 import '../widgets/custom_loading.dart';
 import '../widgets/shared_smart_refresher.dart';
 import '../widgets/shared_timeline_widget.dart';
@@ -46,7 +47,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   final RefreshController _refreshController = RefreshController(
     initialRefresh: false,
   );
-  TaskStatus? _selectedStatus;
+
+  // Accurate task counts via Firestore aggregation (like statistics_screen)
+  int _totalTasks = 0;
+  int _activeTasks = 0;
+  int _doneTasks = 0;
 
   @override
   void initState() {
@@ -54,6 +59,47 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     context.read<ActivityBloc>().add(
       MonitorActivities(projectId: widget.project.id),
     );
+    _fetchTaskCounts();
+  }
+
+  Future<void> _fetchTaskCounts() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated) return;
+    final user = authState.user;
+
+    Query tasksRef = FirebaseFirestore.instance
+        .collection('projects')
+        .doc(widget.project.id)
+        .collection('tasks');
+
+    if (user.role == UserRole.worker) {
+      tasksRef = tasksRef.where('assignedWorkerIds', arrayContains: user.id);
+    }
+
+    final results = await Future.wait([
+      tasksRef.where('isApproved', isEqualTo: true).count().get(),
+      tasksRef
+          .where('isApproved', isEqualTo: true)
+          .where(
+            'status',
+            whereNotIn: [TaskStatus.completed.name, TaskStatus.cancelled.name],
+          )
+          .count()
+          .get(),
+      tasksRef
+          .where('isApproved', isEqualTo: true)
+          .where('status', isEqualTo: TaskStatus.completed.name)
+          .count()
+          .get(),
+    ]);
+
+    if (mounted) {
+      setState(() {
+        _totalTasks = results[0].count ?? 0;
+        _activeTasks = results[1].count ?? 0;
+        _doneTasks = results[2].count ?? 0;
+      });
+    }
   }
 
   @override
@@ -63,7 +109,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   }
 
   Future<void> _onRefresh() async {
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await _fetchTaskCounts();
     _refreshController.refreshCompleted();
   }
 
@@ -79,78 +125,114 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, authState) {
-        if (authState is! Authenticated) {
-          return const Scaffold(body: CustomLoading());
+    return BlocListener<ProjectBloc, ProjectState>(
+      listener: (context, state) {
+        if (state is ProjectError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: context.error,
+            ),
+          );
         }
-
-        final user = authState.user;
-
-        return StreamBuilder<ProjectEntity>(
-          stream: context.read<ProjectRepository>().getProjectStream(
-            widget.project.id,
-          ),
-          builder: (context, projectSnapshot) {
-            if (projectSnapshot.connectionState == ConnectionState.waiting &&
-                !projectSnapshot.hasData) {
-              return Scaffold(
-                appBar: SharedAppBar(
-                  title: widget.project.title,
-                  showBackButton: true,
-                ),
-                body: const Center(child: CustomLoading()),
-              );
-            }
-
-            final currentProject = projectSnapshot.data ?? widget.project;
-
-            return StreamBuilder<List<TaskEntity>>(
-              stream: context.read<ProjectRepository>().getTasksStream(
-                currentProject.id,
-              ),
-              builder: (context, tasksSnapshot) {
-                final tasks = tasksSnapshot.data ?? [];
-
-                return FutureBuilder<Map<String, UserEntity>>(
-                  future: _fetchUsers(context, [
-                    ...currentProject.assignedUserIds,
-                    currentProject.creatorId,
-                  ]),
-                  builder: (context, usersSnapshot) {
-                    final users = usersSnapshot.data ?? {};
-
-                    return Scaffold(
-                      extendBodyBehindAppBar: true,
-                      appBar: _buildAppBar(
-                        context,
-                        user,
-                        currentProject,
-                        tasks,
-                        users,
-                      ),
-                      body: Stack(
-                        children: [
-                          const ProjectDetailBackground(),
-                          SafeArea(
-                            child: _buildScrollableContent(
-                              context,
-                              user,
-                              currentProject,
-                              tasks,
-                              users,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            );
-          },
-        );
       },
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, authState) {
+          if (authState is! Authenticated) {
+            return const Scaffold(body: CustomLoading());
+          }
+
+          final user = authState.user;
+
+          return StreamBuilder<ProjectEntity>(
+            stream: context.read<ProjectRepository>().getProjectStream(
+              widget.project.id,
+            ),
+            builder: (context, projectSnapshot) {
+              if (projectSnapshot.connectionState == ConnectionState.waiting &&
+                  !projectSnapshot.hasData) {
+                return Scaffold(
+                  appBar: SharedAppBar(
+                    title: widget.project.title,
+                    showBackButton: true,
+                  ),
+                  body: const Center(child: CustomLoading()),
+                );
+              }
+
+              final currentProject = projectSnapshot.data ?? widget.project;
+
+              return StreamBuilder<List<TaskEntity>>(
+                stream: context.read<ProjectRepository>().getTasksStream(
+                  currentProject.id,
+                  limit: 10,
+                  userId: user.id,
+                  role: user.role,
+                ),
+                builder: (context, tasksSnapshot) {
+                  final tasks = tasksSnapshot.data ?? [];
+
+                  return FutureBuilder<Map<String, UserEntity>>(
+                    future: _fetchUsers(context, [
+                      ...currentProject.assignedUserIds,
+                      currentProject.creatorId,
+                    ]),
+                    builder: (context, usersSnapshot) {
+                      final users = usersSnapshot.data ?? {};
+
+                      return Scaffold(
+                        extendBodyBehindAppBar: true,
+                        appBar: _buildAppBar(
+                          context,
+                          user,
+                          currentProject,
+                          tasks,
+                          users,
+                        ),
+                        floatingActionButton: user.role != UserRole.worker
+                            ? FloatingActionButton.extended(
+                                onPressed: () => context.push(
+                                  '/project/${currentProject.id}/add-task',
+                                  extra: currentProject,
+                                ),
+                                backgroundColor: context.primary,
+                                icon: Icon(
+                                  Ionicons.add,
+                                  color: context.surface,
+                                ),
+                                label: Text(
+                                  LangKeys.addTask.tr(),
+                                  style: TextStyle(
+                                    color: context.surface,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ).animateScale(delayMs: 400)
+                            : null,
+
+                        body: Stack(
+                          children: [
+                            const ProjectDetailBackground(),
+                            SafeArea(
+                              child: _buildScrollableContent(
+                                context,
+                                user,
+                                currentProject,
+                                tasks,
+                                users,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -194,13 +276,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             onPressed: () =>
                 _showFinishProjectDialog(context, currentProject, user),
           ),
-
-        if (currentProject.status != ProjectStatus.finished)
+        if (currentProject.status != ProjectStatus.archived &&
+            (user.role == UserRole.admin || user.role == UserRole.supervisor))
           IconButton(
-            icon: const Icon(Ionicons.add_circle_outline),
-            tooltip: LangKeys.addTask.tr(),
+            icon: const Icon(Ionicons.archive_outline),
+            tooltip: LangKeys.archiveProject.tr(),
             onPressed: () =>
-                context.push('/project/${currentProject.id}/add-task'),
+                _showArchiveProjectDialog(context, currentProject, user),
           ),
 
         IconButton(
@@ -281,10 +363,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       Text(
                         LangKeys.smartExport.tr(),
                         style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
-                            ),
+                            ?.copyWith(fontWeight: FontWeight.w900),
                       ),
                       Text(
                         LangKeys.generateInsights.tr(),
@@ -381,10 +460,15 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     );
 
     try {
+      final requests = await context
+          .read<ProjectRepository>()
+          .getProjectRequests(project.id);
+
       await PdfService.generateProjectReport(
         project: project,
         tasks: tasks,
         users: users,
+        requests: requests,
         shouldPrint: result['shouldPrint'],
       );
     } finally {
@@ -432,31 +516,27 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       ),
                       const SizedBox(height: 24),
                       ProjectStatsRow(
-                        totalTasks: approvedTasks.length,
-                        activeTasks: approvedTasks
-                            .where((t) => t.status != TaskStatus.completed)
-                            .length,
-                        doneTasks: approvedTasks
-                            .where((t) => t.status == TaskStatus.completed)
-                            .length,
+                        totalTasks: _totalTasks,
+                        activeTasks: _activeTasks,
+                        doneTasks: _doneTasks,
+                        project: currentProject,
                       ),
                       const SizedBox(height: 32),
                       ProjectStakeholderCard(
                         project: currentProject,
                         users: users,
                       ),
-                      const SizedBox(height: 48),
+                      const SizedBox(height: 32),
                       ProjectSectionHeader(
                         title: LangKeys.tasks.tr().toUpperCase(),
-                        count: tasks.length,
                         color: context.primary,
                         icon: Ionicons.layers_outline,
-                        trailing: TaskFilterDropdown(
-                          selectedStatus: _selectedStatus,
-                          onStatusSelected: (status) {
-                            setState(() => _selectedStatus = status);
-                          },
-                        ),
+                        onViewAll: tasks.isEmpty || tasks.length < 10
+                            ? null
+                            : () => context.push(
+                                '/project/${currentProject.id}/tasks',
+                                extra: currentProject,
+                              ),
                       ).animateEntrance(delayMs: 400),
                       const SizedBox(height: 24),
                       if (tasks.isEmpty)
@@ -467,8 +547,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                           currentProject,
                           tasks,
                           users,
+                          user,
                         ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 22),
                       SharedTimelineWidget(
                         activities: activities,
                         title: LangKeys.projectActivities.tr(),
@@ -493,103 +574,37 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   List<Widget> _buildFilteredTasks(
     BuildContext context,
     ProjectEntity project,
-    List<TaskEntity> allTasks,
+    List<TaskEntity> tasks,
     Map<String, UserEntity> users,
+    UserEntity currentUser,
   ) {
-    var filtered = allTasks;
-    if (_selectedStatus != null) {
-      filtered = allTasks.where((t) => t.status == _selectedStatus).toList();
+    if (tasks.isEmpty) {
+      return [const EmptyTasksMessage()];
     }
 
-    if (filtered.isEmpty) {
-      return [
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 40),
-            child: Text(
-              LangKeys.noTasksStatus.tr(),
-              style: TextStyle(
-                color: context.onSurface.withOpacity(0.4),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+    return tasks.asMap().entries.map((entry) {
+      final index = entry.key;
+      final task = entry.value;
+
+      final isMyWorkerAssigned =
+          currentUser.role == UserRole.projectManager &&
+          task.assignedWorkerIds.any(
+            (workerId) => project.workerManagerMap[workerId] == currentUser.id,
+          );
+
+      return AnimatedListWrapper(
+        index: index,
+        child: TaskCard(
+          task: task,
+          users: users,
+          isMyWorkerAssigned: isMyWorkerAssigned,
+          onTap: () => context.push(
+            '/project/${project.id}/task/${task.id}',
+            extra: project,
           ),
         ),
-      ];
-    }
-
-    // Grouping by status
-    final Map<TaskStatus, List<TaskEntity>> grouped = {};
-    for (var t in filtered) {
-      grouped.putIfAbsent(t.status, () => []).add(t);
-    }
-
-    final List<Widget> items = [];
-    final statuses = _selectedStatus != null
-        ? [_selectedStatus!]
-        : TaskStatus.values.where((s) => grouped.containsKey(s)).toList();
-
-    for (var status in statuses) {
-      final statusTasks = grouped[status] ?? [];
-      if (statusTasks.isEmpty) continue;
-
-      if (_selectedStatus == null) {
-        items.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12, top: 8),
-            child: Text(
-              status.name.tr().toUpperCase(),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1,
-                color: _getStatusColor(status, context).withOpacity(0.8),
-              ),
-            ),
-          ),
-        );
-      }
-
-      for (var i = 0; i < statusTasks.length; i++) {
-        items.add(_buildTaskCard(context, project, statusTasks[i], users, i));
-      }
-      items.add(const SizedBox(height: 16));
-    }
-
-    return items;
-  }
-
-  Widget _buildTaskCard(
-    BuildContext context,
-    ProjectEntity project,
-    TaskEntity task,
-    Map<String, UserEntity> users,
-    int index,
-  ) {
-    return AnimatedListWrapper(
-      index: index,
-      child: TaskCard(
-        task: task,
-        users: users,
-        onTap: () => context.push(
-          '/project/${project.id}/task/${task.id}',
-          extra: project,
-        ),
-      ),
-    );
-  }
-
-  Color _getStatusColor(TaskStatus status, BuildContext context) {
-    switch (status) {
-      case TaskStatus.completed:
-        return Colors.green.shade800;
-      case TaskStatus.inProgress:
-        return context.primary;
-      case TaskStatus.cancelled:
-        return context.error;
-      case TaskStatus.pending:
-        return context.purple;
-    }
+      );
+    }).toList();
   }
 
   void _showFinishProjectDialog(
@@ -621,6 +636,43 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             child: Text(
               LangKeys.finishProject.tr(),
               style: TextStyle(color: context.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showArchiveProjectDialog(
+    BuildContext context,
+    ProjectEntity project,
+    UserEntity user,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(LangKeys.archiveProject.tr()),
+        content: Text(LangKeys.confirmArchive.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(LangKeys.cancel.tr()),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<ProjectBloc>().add(
+                UpdateProjectStatus(
+                  projectId: project.id,
+                  status: ProjectStatus.archived,
+                  userId: user.id,
+                ),
+              );
+              Navigator.pop(context);
+              context.pop(); // Go back to dashboard
+            },
+            child: Text(
+              LangKeys.archiveProject.tr(),
+              style: TextStyle(color: context.error),
             ),
           ),
         ],

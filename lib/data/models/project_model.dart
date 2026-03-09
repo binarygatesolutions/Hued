@@ -10,6 +10,8 @@ class ProjectModel extends ProjectEntity {
     required super.managerIds,
     required super.clientIds,
     required super.assignedUserIds,
+    required super.workerIds,
+    super.workerManagerMap = const {},
     required super.status,
     required super.creatorId,
     required super.createdAt,
@@ -30,6 +32,10 @@ class ProjectModel extends ProjectEntity {
       managerIds: List<String>.from(json['managerIds'] ?? []),
       clientIds: List<String>.from(json['clientIds'] ?? []),
       assignedUserIds: List<String>.from(json['assignedUserIds'] ?? []),
+      workerIds: List<String>.from(json['workerIds'] ?? []),
+      workerManagerMap: Map<String, String>.from(
+        json['workerManagerMap'] ?? {},
+      ),
       status: status,
       createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -44,6 +50,8 @@ class ProjectModel extends ProjectEntity {
       'creatorId': creatorId,
       'clientIds': clientIds,
       'assignedUserIds': assignedUserIds,
+      'workerIds': workerIds,
+      'workerManagerMap': workerManagerMap,
       'status': status.name,
       'createdAt': Timestamp.fromDate(createdAt),
     };
@@ -58,6 +66,8 @@ class ProjectModel extends ProjectEntity {
       managerIds: entity.managerIds,
       clientIds: entity.clientIds,
       assignedUserIds: entity.assignedUserIds,
+      workerIds: entity.workerIds,
+      workerManagerMap: entity.workerManagerMap,
       status: entity.status,
       creatorId: entity.creatorId,
       createdAt: entity.createdAt,

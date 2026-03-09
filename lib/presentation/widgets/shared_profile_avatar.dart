@@ -42,10 +42,13 @@ class SharedProfileAvatar extends StatelessWidget {
           : null,
       child: !hasImage
           ? (placeholder ??
-                Icon(
-                  Icons.person_rounded,
-                  color: context.primary,
-                  size: radius,
+                Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: TextStyle(
+                    fontSize: radius * .75,
+                    fontWeight: FontWeight.w800,
+                    color: context.primary,
+                  ),
                 ))
           : null,
     );

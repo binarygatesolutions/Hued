@@ -12,6 +12,8 @@ import '../../presentation/blocs/project_bloc.dart';
 import '../../presentation/blocs/activity_bloc.dart';
 import '../../presentation/blocs/sync_bloc.dart';
 import '../../presentation/blocs/theme_bloc.dart';
+import '../../presentation/blocs/archive_bloc.dart';
+import '../../presentation/blocs/specialty_bloc.dart';
 import '../services/notification_service.dart';
 
 final sl = GetIt.instance;
@@ -46,7 +48,9 @@ Future<void> initDependencies() async {
   sl.registerFactory(
     () => ProjectBloc(projectRepository: sl(), authRepository: sl()),
   );
+  sl.registerFactory(() => ArchiveBloc(projectRepository: sl()));
   sl.registerFactory(() => ActivityBloc(projectRepository: sl()));
   sl.registerFactory(() => SyncBloc(projectRepository: sl()));
+  sl.registerFactory(() => SpecialtyBloc(sl()));
   sl.registerLazySingleton<NotificationService>(() => NotificationService());
 }

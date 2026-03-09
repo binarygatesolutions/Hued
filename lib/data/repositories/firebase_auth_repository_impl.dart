@@ -49,6 +49,8 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
     String email,
     String password,
     UserRole role,
+    String? specialtyId,
+    String? specialtyName,
   ) async {
     try {
       final credential = await _firebaseAuth.createUserWithEmailAndPassword(
@@ -62,6 +64,8 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
         'name': name,
         'email': email.trim(),
         'role': role.name,
+        'specialtyId': specialtyId,
+        'specialtyName': specialtyName,
         'createdAt': FieldValue.serverTimestamp(),
         'fcmToken': await FirebaseMessaging.instance.getToken(),
       });
@@ -72,6 +76,8 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
         email: email.trim(),
         role: role,
         profile: null,
+        specialtyId: specialtyId,
+        specialtyName: specialtyName,
       );
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -123,7 +129,6 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
         debugPrint('Error fetching users chunk: $e');
       }
     }
-
     return users;
   }
 
@@ -131,6 +136,9 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
     final doc = await _firestore.collection('users').doc(user.uid).get();
     UserRole role = UserRole.client;
     String? img;
+    String? specialtyId;
+    String? specialtyName;
+
     if (doc.exists) {
       final data = doc.data();
       final roleStr = data?['role'] as String?;
@@ -139,6 +147,8 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
         orElse: () => UserRole.client,
       );
       img = data?['profile'];
+      specialtyId = data?['specialtyId'];
+      specialtyName = data?['specialtyName'];
     }
 
     return UserEntity(
@@ -147,7 +157,24 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
       email: user.email ?? '',
       role: role,
       profile: img,
+      specialtyId: specialtyId,
+      specialtyName: specialtyName,
     );
+  }
+
+  @override
+  Future<List<SpecialtyEntity>> getSpecialties() async {
+    final snapshot = await _firestore.collection('specialties').get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      data['id'] = doc.id;
+      return SpecialtyEntity.fromJson(data);
+    }).toList();
+  }
+
+  @override
+  Future<void> addSpecialty(String name) async {
+    await _firestore.collection('specialties').add({'name': name});
   }
 
   String _handleAuthException(FirebaseAuthException e) {

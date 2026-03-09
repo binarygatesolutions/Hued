@@ -236,6 +236,12 @@ class ActivityTimelineTile extends StatelessWidget {
         return Ionicons.checkmark_circle_outline;
       case ActivityType.taskRejected:
         return Ionicons.close_circle_outline;
+      case ActivityType.requestCreated:
+        return Ionicons.git_pull_request_outline;
+      case ActivityType.requestApprovedStep:
+        return Ionicons.checkmark_done_outline;
+      case ActivityType.requestRejected:
+        return Ionicons.close_circle_outline;
     }
   }
 
@@ -257,6 +263,12 @@ class ActivityTimelineTile extends StatelessWidget {
         return Colors.green;
       case ActivityType.taskRejected:
         return Colors.blueGrey;
+      case ActivityType.requestCreated:
+        return Colors.blue;
+      case ActivityType.requestApprovedStep:
+        return Colors.green;
+      case ActivityType.requestRejected:
+        return Colors.red;
     }
   }
 }

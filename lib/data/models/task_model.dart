@@ -13,6 +13,8 @@ class TaskModel extends TaskEntity {
     required super.createdAt,
     required super.creatorId,
     super.isApproved,
+    super.assignedWorkerIds,
+    super.completedAt,
   });
 
   factory TaskModel.fromFirestore(Map<String, dynamic> json, String id) {
@@ -33,6 +35,8 @@ class TaskModel extends TaskEntity {
       createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       creatorId: json['creatorId'] ?? 'Unknown',
       isApproved: json['isApproved'] ?? false,
+      assignedWorkerIds: List<String>.from(json['assignedWorkerIds'] ?? []),
+      completedAt: (json['completedAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -47,6 +51,8 @@ class TaskModel extends TaskEntity {
       'createdAt': Timestamp.fromDate(createdAt),
       'creatorId': creatorId,
       'isApproved': isApproved,
+      'assignedWorkerIds': assignedWorkerIds,
+      if (completedAt != null) 'completedAt': Timestamp.fromDate(completedAt!),
     };
   }
 
@@ -62,6 +68,8 @@ class TaskModel extends TaskEntity {
       createdAt: entity.createdAt,
       creatorId: entity.creatorId,
       isApproved: entity.isApproved,
+      assignedWorkerIds: entity.assignedWorkerIds,
+      completedAt: entity.completedAt,
     );
   }
 }

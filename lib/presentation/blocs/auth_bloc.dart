@@ -58,6 +58,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         event.email,
         event.password,
         event.role,
+        event.specialtyId,
+        event.specialtyName,
       );
       emit(Authenticated(user));
     } catch (e) {

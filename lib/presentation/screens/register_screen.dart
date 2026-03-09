@@ -10,6 +10,7 @@ import 'package:hued/domain/entities/entities.dart';
 import '../blocs/auth_bloc.dart';
 import '../blocs/auth_event.dart';
 import '../blocs/auth_state.dart';
+import '../blocs/specialty_bloc.dart';
 import '../widgets/shared_app_logo.dart';
 import '../widgets/shared_text_field.dart';
 import '../widgets/shared_button.dart';
@@ -26,6 +27,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  UserRole _selectedRole = UserRole.client;
+  SpecialtyEntity? _selectedSpecialty;
 
   void _onAuthStateChanged(BuildContext context, AuthState state) {
     if (state is Authenticated) {
@@ -131,6 +134,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               }
                             },
                           ).animateListStep(index: 7),
+                          const SizedBox(height: 20),
+                          _buildRoleDropdown().animateListStep(index: 8),
+                          if (_selectedRole == UserRole.worker) ...[
+                            const SizedBox(height: 20),
+                            _buildSpecialtyDropdown().animateListStep(index: 9),
+                          ],
                           const SizedBox(height: 40),
                           _buildRegisterButton(context, state),
                         ],
@@ -145,6 +154,63 @@ class _RegisterScreenState extends State<RegisterScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildRoleDropdown() {
+    return DropdownButtonFormField<UserRole>(
+      value: _selectedRole,
+      decoration: InputDecoration(
+        labelText: "Account Type",
+        prefixIcon: const Icon(Ionicons.person_circle_outline),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+        filled: true,
+        fillColor: context.onSurface.withOpacity(0.05),
+      ),
+      isExpanded: true,
+      items: [UserRole.client, UserRole.worker].map((role) {
+        return DropdownMenuItem(
+          value: role,
+          child: Text(role.label, overflow: TextOverflow.ellipsis),
+        );
+      }).toList(),
+      onChanged: (val) {
+        if (val != null) {
+          setState(() {
+            _selectedRole = val;
+            if (_selectedRole != UserRole.worker) {
+              _selectedSpecialty = null;
+            }
+          });
+        }
+      },
+    );
+  }
+
+  Widget _buildSpecialtyDropdown() {
+    return BlocBuilder<SpecialtyBloc, SpecialtyState>(
+      builder: (context, state) {
+        return DropdownButtonFormField<SpecialtyEntity>(
+          value: _selectedSpecialty,
+          decoration: InputDecoration(
+            labelText: LangKeys.specialty.tr(),
+            prefixIcon: const Icon(Ionicons.briefcase_outline),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+            filled: true,
+            fillColor: context.onSurface.withOpacity(0.05),
+          ),
+          isExpanded: true,
+          items: state.specialties.map((specialty) {
+            return DropdownMenuItem(
+              value: specialty,
+              child: Text(specialty.name, overflow: TextOverflow.ellipsis),
+            );
+          }).toList(),
+          onChanged: (val) {
+            setState(() => _selectedSpecialty = val);
+          },
+        );
+      },
     );
   }
 
@@ -193,12 +259,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_emailController.text.isNotEmpty &&
         _passwordController.text.isNotEmpty &&
         _nameController.text.isNotEmpty) {
+      if (_selectedRole == UserRole.worker && _selectedSpecialty == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please select a specialty")),
+        );
+        return;
+      }
       context.read<AuthBloc>().add(
         RegisterRequested(
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
-          role: UserRole.client, // Default role for registration
+          role: _selectedRole,
+          specialtyId: _selectedSpecialty?.id,
+          specialtyName: _selectedSpecialty?.name,
         ),
       );
     } else {

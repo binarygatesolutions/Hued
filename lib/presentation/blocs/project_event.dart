@@ -31,6 +31,7 @@ class AddTask extends ProjectEvent {
   final String priority;
   final bool isApproved;
   final String creatorId;
+  final List<String> assignedWorkerIds;
 
   const AddTask({
     required this.projectId,
@@ -40,6 +41,7 @@ class AddTask extends ProjectEvent {
     required this.priority,
     required this.isApproved,
     required this.creatorId,
+    this.assignedWorkerIds = const [],
   });
 }
 
@@ -128,16 +130,27 @@ class UpdateProjectUsers extends ProjectEvent {
   final List<String> supervisorIds;
   final List<String> managerIds;
   final List<String> clientIds;
+  final List<String> workerIds;
+  final Map<String, String> workerManagerMap;
 
   const UpdateProjectUsers({
     required this.projectId,
     required this.supervisorIds,
     required this.managerIds,
     required this.clientIds,
+    this.workerIds = const [],
+    this.workerManagerMap = const {},
   });
 
   @override
-  List<Object?> get props => [projectId, supervisorIds, managerIds, clientIds];
+  List<Object?> get props => [
+    projectId,
+    supervisorIds,
+    managerIds,
+    clientIds,
+    workerIds,
+    workerManagerMap,
+  ];
 }
 
 class AddAttachment extends ProjectEvent {
@@ -230,4 +243,90 @@ class LoadProjectUsers extends ProjectEvent {
 
   @override
   List<Object?> get props => [userIds];
+}
+
+class LoadProjects extends ProjectEvent {
+  final String? userId;
+  final UserRole? role;
+  final int limit;
+  final ProjectStatus? status;
+
+  const LoadProjects({this.userId, this.role, this.limit = 10, this.status});
+
+  @override
+  List<Object?> get props => [userId, role, limit, status];
+}
+
+class LoadMoreProjects extends ProjectEvent {
+  final String? userId;
+  final UserRole? role;
+  final int limit;
+  final ProjectStatus? status;
+
+  const LoadMoreProjects({
+    this.userId,
+    this.role,
+    this.limit = 10,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [userId, role, limit, status];
+}
+
+/// Assign (or update) the list of workers on a task.
+class AssignWorkersToTask extends ProjectEvent {
+  final String projectId;
+  final String taskId;
+  final List<String> workerIds;
+
+  const AssignWorkersToTask({
+    required this.projectId,
+    required this.taskId,
+    required this.workerIds,
+  });
+
+  @override
+  List<Object?> get props => [projectId, taskId, workerIds];
+}
+
+class CreateRequest extends ProjectEvent {
+  final RequestEntity request;
+  const CreateRequest(this.request);
+
+  @override
+  List<Object?> get props => [request];
+}
+
+class LoadPendingRequests extends ProjectEvent {
+  final String userId;
+  const LoadPendingRequests(this.userId);
+
+  @override
+  List<Object?> get props => [userId];
+}
+
+class UpdateRequestStatusEvent extends ProjectEvent {
+  final RequestEntity request;
+  final bool approved;
+  final String userId;
+  final String? rejectionReason;
+
+  const UpdateRequestStatusEvent({
+    required this.request,
+    required this.approved,
+    required this.userId,
+    this.rejectionReason,
+  });
+
+  @override
+  List<Object?> get props => [request, approved, userId, rejectionReason];
+}
+
+class RequestsUpdated extends ProjectEvent {
+  final List<RequestEntity> requests;
+  const RequestsUpdated(this.requests);
+
+  @override
+  List<Object?> get props => [requests];
 }

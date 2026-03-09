@@ -10,6 +10,7 @@ import '../models/project_model.dart';
 import '../models/task_model.dart';
 import '../models/activity_model.dart';
 import '../models/attachment_model.dart';
+import '../models/request_model.dart';
 
 class FirebaseProjectRepositoryImpl implements ProjectRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -61,6 +62,9 @@ class FirebaseProjectRepositoryImpl implements ProjectRepository {
   CollectionReference _attachmentsCollection(String projectId, String taskId) =>
       _tasksCollection(projectId).doc(taskId).collection('attachments');
 
+  CollectionReference get _requestsCollection =>
+      _firestore.collection('requests');
+
   @override
   Future<({List<ProjectEntity> projects, dynamic lastDoc, bool hasMore})>
   getPaginatedProjects({
@@ -68,11 +72,21 @@ class FirebaseProjectRepositoryImpl implements ProjectRepository {
     dynamic lastDocument,
     String? userId,
     UserRole? role,
+    ProjectStatus? status,
   }) async {
     Query query = _projectsCollection.orderBy('createdAt', descending: true);
 
     if (role != null && role != UserRole.admin && userId != null) {
       query = query.where('assignedUserIds', arrayContains: userId);
+    }
+
+    if (status != null) {
+      query = query.where('status', isEqualTo: status.name);
+    } else {
+      // By default, only show non-archived projects on dashboard
+      // Note: This requires a composite index if filtered with user/role in Firestore
+      // For now, let's keep it simple or assume we filter by status when needed.
+      query = query.where('status', isNotEqualTo: ProjectStatus.archived.name);
     }
 
     query = query.limit(limit + 1);
@@ -119,6 +133,7 @@ class FirebaseProjectRepositoryImpl implements ProjectRepository {
     await _tasksCollection(projectId).doc(taskId).update({
       'status': status.name,
       'lastUpdatedBy': userId ?? 'system',
+      if (status == TaskStatus.completed) 'completedAt': Timestamp.now(),
     });
   }
 
@@ -131,6 +146,8 @@ class FirebaseProjectRepositoryImpl implements ProjectRepository {
     await _tasksCollection(projectId).doc(taskId).update({
       'isApproved': true,
       'lastUpdatedBy': userId ?? 'system',
+      'status': TaskStatus.completed.name,
+      'completedAt': Timestamp.now(),
     });
   }
 
@@ -215,20 +232,36 @@ class FirebaseProjectRepositoryImpl implements ProjectRepository {
     required List<String> supervisorIds,
     required List<String> managerIds,
     required List<String> clientIds,
+    List<String> workerIds = const [],
+    Map<String, String> workerManagerMap = const {},
   }) async {
     // Combine all IDs for easier querying
     final assignedUserIds = {
       ...supervisorIds,
       ...managerIds,
       ...clientIds,
+      ...workerIds,
     }.toList();
 
     await _projectsCollection.doc(projectId).update({
       'supervisorIds': supervisorIds,
       'managerIds': managerIds,
       'clientIds': clientIds,
+      'workerIds': workerIds,
+      'workerManagerMap': workerManagerMap,
       'assignedUserIds': assignedUserIds,
     });
+  }
+
+  @override
+  Future<void> assignWorkersToTask(
+    String projectId,
+    String taskId,
+    List<String> workerIds,
+  ) async {
+    await _tasksCollection(
+      projectId,
+    ).doc(taskId).update({'assignedWorkerIds': workerIds});
   }
 
   @override
@@ -332,8 +365,24 @@ class FirebaseProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Stream<List<TaskEntity>> getTasksStream(String projectId) {
-    return _tasksCollection(projectId).snapshots().map((snapshot) {
+  Stream<List<TaskEntity>> getTasksStream(
+    String projectId, {
+    int? limit,
+    String? userId,
+    UserRole? role,
+  }) {
+    Query query = _tasksCollection(
+      projectId,
+    ).orderBy('createdAt', descending: true);
+
+    if (role == UserRole.worker && userId != null) {
+      query = query.where('assignedWorkerIds', arrayContains: userId);
+    }
+
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+    return query.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         return TaskModel.fromFirestore(
           doc.data() as Map<String, dynamic>,
@@ -341,5 +390,111 @@ class FirebaseProjectRepositoryImpl implements ProjectRepository {
         );
       }).toList();
     });
+  }
+
+  @override
+  Future<({List<TaskEntity> tasks, dynamic lastDoc, bool hasMore})>
+  getPaginatedTasks(
+    String projectId, {
+    int limit = 20,
+    dynamic lastDocument,
+    TaskStatus? status,
+    String? userId,
+    UserRole? role,
+  }) async {
+    Query query = _tasksCollection(
+      projectId,
+    ).orderBy('createdAt', descending: true);
+
+    if (status != null) {
+      query = query.where('status', isEqualTo: status.name);
+    }
+
+    if (role == UserRole.worker && userId != null) {
+      query = query.where('assignedWorkerIds', arrayContains: userId);
+    }
+
+    query = query.limit(limit + 1);
+
+    if (lastDocument != null) {
+      query = query.startAfterDocument(lastDocument as DocumentSnapshot);
+    }
+
+    final snapshot = await query.get();
+    final allDocs = snapshot.docs;
+    final hasMore = allDocs.length > limit;
+    final docsToReturn = hasMore ? allDocs.take(limit).toList() : allDocs;
+
+    final tasks = docsToReturn.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return TaskModel.fromFirestore(data, doc.id);
+    }).toList();
+
+    final lastDoc = docsToReturn.isNotEmpty ? docsToReturn.last : null;
+
+    return (tasks: tasks, lastDoc: lastDoc, hasMore: hasMore);
+  }
+
+  @override
+  Future<void> createRequest(RequestEntity request) async {
+    final model = RequestModel.fromEntity(request);
+    await _requestsCollection.doc(model.id).set(model.toFirestore());
+  }
+
+  @override
+  Future<void> updateRequest(RequestEntity request) async {
+    final model = RequestModel.fromEntity(request);
+    await _requestsCollection.doc(model.id).update(model.toFirestore());
+  }
+
+  @override
+  Stream<List<RequestEntity>> getPendingRequestsStream(String userId) {
+    return _requestsCollection
+        .where('requiredApproverIds', arrayContains: userId)
+        .where('status', isEqualTo: RequestStatus.pending.name)
+        .limit(20)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            return RequestModel.fromFirestore(
+              doc.data() as Map<String, dynamic>,
+              doc.id,
+            );
+          }).toList();
+        });
+  }
+
+  @override
+  Stream<List<RequestEntity>> getTaskPendingRequestsStream(
+    String projectId,
+    String taskId,
+  ) {
+    return _requestsCollection
+        .where('projectId', isEqualTo: projectId)
+        .where('taskId', isEqualTo: taskId)
+        .where('status', isEqualTo: RequestStatus.pending.name)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            return RequestModel.fromFirestore(
+              doc.data() as Map<String, dynamic>,
+              doc.id,
+            );
+          }).toList();
+        });
+  }
+
+  @override
+  Future<List<RequestEntity>> getProjectRequests(String projectId) async {
+    final snapshot = await _requestsCollection
+        .where('projectId', isEqualTo: projectId)
+        .get();
+
+    return snapshot.docs.map((doc) {
+      return RequestModel.fromFirestore(
+        doc.data() as Map<String, dynamic>,
+        doc.id,
+      );
+    }).toList();
   }
 }

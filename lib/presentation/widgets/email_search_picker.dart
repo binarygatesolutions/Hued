@@ -16,7 +16,7 @@ class MultiEmailSearchPicker extends StatefulWidget {
   final List<String> initialSelectedIds;
   final List<UserEntity> initialUsers;
   final ValueChanged<List<String>> onChanged;
-  final UserRole? filterRole;
+  final List<UserRole>? filterRoles;
 
   const MultiEmailSearchPicker({
     super.key,
@@ -24,7 +24,7 @@ class MultiEmailSearchPicker extends StatefulWidget {
     required this.initialUsers,
     required this.onChanged,
     this.initialSelectedIds = const [],
-    this.filterRole,
+    this.filterRoles,
   });
 
   @override
@@ -34,8 +34,15 @@ class MultiEmailSearchPicker extends StatefulWidget {
 class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
   late List<String> _selectedIds;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
   List<UserEntity> _filteredUsers = [];
   final Map<String, UserEntity> _resolvedUsers = {};
+
+  DocumentSnapshot? _lastDocument;
+  bool _isLoading = false;
+  bool _hasMore = true;
+  StateSetter? _modalSetState;
 
   @override
   void initState() {
@@ -44,11 +51,113 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
     for (var u in widget.initialUsers) {
       _resolvedUsers[u.id] = u;
     }
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoading && _hasMore) {
+        _fetchUsers();
+      }
+    }
+  }
+
+  Future<void> _fetchUsers({bool refresh = false}) async {
+    if (_isLoading) return;
+
+    if (refresh) {
+      _lastDocument = null;
+      _hasMore = true;
+      _filteredUsers = [];
+    }
+    if (!_hasMore) return;
+
+    if (mounted) setState(() => _isLoading = true);
+    if (_modalSetState != null) _modalSetState!(() {});
+
+    try {
+      final queryText = _searchController.text.toLowerCase().trim();
+      Query query = FirebaseFirestore.instance.collection('users');
+
+      if (queryText.isEmpty) {
+        if (widget.filterRoles != null && widget.filterRoles!.isNotEmpty) {
+          query = query.where(
+            'role',
+            whereIn: widget.filterRoles!.map((r) => r.name).toList(),
+          );
+        }
+        query = query.orderBy(FieldPath.documentId);
+      } else {
+        query = query
+            .where('email', isGreaterThanOrEqualTo: queryText)
+            .where('email', isLessThanOrEqualTo: '$queryText\uf8ff')
+            .orderBy('email');
+      }
+
+      query = query.limit(10);
+      if (_lastDocument != null) {
+        query = query.startAfterDocument(_lastDocument!);
+      }
+
+      final snapshot = await query.get();
+
+      if (snapshot.docs.length < 10) {
+        _hasMore = false;
+      }
+      if (snapshot.docs.isNotEmpty) {
+        _lastDocument = snapshot.docs.last;
+      }
+
+      final fetched = <UserEntity>[];
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        final user = UserEntity.fromJson(data);
+
+        // Local filtering if using inequalities because Firestore doesn't allow compound index easily here
+        if (queryText.isNotEmpty &&
+            widget.filterRoles != null &&
+            widget.filterRoles!.isNotEmpty) {
+          if (!widget.filterRoles!.contains(user.role)) continue;
+        }
+
+        fetched.add(user);
+        _resolvedUsers[user.id] = user;
+      }
+
+      if (mounted) {
+        setState(() {
+          if (refresh) {
+            _filteredUsers = fetched;
+          } else {
+            _filteredUsers.addAll(fetched);
+          }
+          _isLoading = false;
+        });
+      }
+      if (_modalSetState != null) _modalSetState!(() {});
+
+      if (queryText.isNotEmpty && fetched.isEmpty && _hasMore) {
+        await _fetchUsers();
+      }
+    } catch (e) {
+      debugPrint('Search error: $e');
+      if (mounted) setState(() => _isLoading = false);
+      if (_modalSetState != null) _modalSetState!(() {});
+    }
   }
 
   void _showSearchModal() {
     _searchController.clear();
-    _filteredUsers = [];
+    _fetchUsers(refresh: true);
 
     showModalBottomSheet(
       context: context,
@@ -56,34 +165,42 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          height: MediaQuery.of(context).size.height * 0.85,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: context.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: context.onSurface.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+        builder: (context, setModalState) {
+          _modalSetState = setModalState;
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.85,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: context.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(32),
               ),
-              _buildModalHeader(context, setModalState),
-              if (_selectedIds.isNotEmpty)
-                _buildSelectedHorizontalList(context, setModalState),
-              const SizedBox(height: 12),
-              Expanded(child: _buildSearchResults(context, setModalState)),
-            ],
-          ),
-        ),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: context.onSurface.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                _buildModalHeader(context, setModalState),
+                if (_selectedIds.isNotEmpty)
+                  _buildSelectedHorizontalList(context, setModalState),
+                const SizedBox(height: 12),
+                Expanded(child: _buildSearchResults(context, setModalState)),
+              ],
+            ),
+          );
+        },
       ),
-    );
+    ).whenComplete(() {
+      _modalSetState = null;
+    });
   }
 
   Widget _buildModalHeader(BuildContext context, StateSetter setModalState) {
@@ -103,13 +220,17 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
                     ),
                   ),
-                  if (widget.filterRole != null)
+                  if (widget.filterRoles != null &&
+                      widget.filterRoles!.isNotEmpty)
                     Text(
                       LangKeys.filteredFor.tr(
-                        args: [widget.filterRole!.label.toUpperCase()],
+                        args: [
+                          widget.filterRoles!
+                              .map((r) => r.label.toUpperCase())
+                              .join(', '),
+                        ],
                       ),
                       style: TextStyle(
                         fontSize: 9,
@@ -164,9 +285,7 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
                 contentPadding: const EdgeInsets.symmetric(vertical: 18),
               ),
               onChanged: (val) {
-                setModalState(() {
-                  _updateSearchResults(val);
-                });
+                _fetchUsers(refresh: true);
               },
             ),
           ),
@@ -242,7 +361,7 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
   }
 
   Widget _buildSearchResults(BuildContext context, StateSetter setModalState) {
-    if (_filteredUsers.isEmpty && _searchController.text.isNotEmpty) {
+    if (_filteredUsers.isEmpty && !_isLoading) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -266,9 +385,19 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
     }
 
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: _filteredUsers.length,
+      itemCount: _filteredUsers.length + (_hasMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == _filteredUsers.length) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: CircularProgressIndicator(color: context.primary),
+            ),
+          );
+        }
+
         final user = _filteredUsers[index];
         final isSelected = _selectedIds.contains(user.id);
 
@@ -303,12 +432,40 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
                 color: isSelected ? context.primary : context.onSurface,
               ),
             ),
-            subtitle: Text(
-              user.email,
-              style: TextStyle(
-                fontSize: 12,
-                color: context.onSurface.withOpacity(0.5),
-              ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.email,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.onSurface.withOpacity(0.5),
+                  ),
+                ),
+                if (user.specialtyName != null &&
+                    user.specialtyName!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.secondary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        user.specialtyName!,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: context.secondary,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             trailing: isSelected
                 ? Icon(Ionicons.checkmark_circle, color: context.primary)
@@ -331,44 +488,6 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
         );
       },
     );
-  }
-
-  void _updateSearchResults(String query) async {
-    if (query.isEmpty) {
-      if (mounted) setState(() => _filteredUsers = []);
-      return;
-    }
-
-    final lowerQuery = query.toLowerCase();
-
-    try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('email', isGreaterThanOrEqualTo: lowerQuery)
-          .where('email', isLessThanOrEqualTo: lowerQuery + '\uf8ff')
-          .limit(10)
-          .get();
-
-      final fetched = <UserEntity>[];
-      for (var userDoc in querySnapshot.docs) {
-        final data = userDoc.data();
-        data['id'] = userDoc.id;
-        final user = UserEntity.fromJson(data);
-        if (widget.filterRole != null && user.role != widget.filterRole) {
-          continue;
-        }
-        fetched.add(user);
-        _resolvedUsers[user.id] = user;
-      }
-
-      if (mounted) {
-        setState(() {
-          _filteredUsers = fetched;
-        });
-      }
-    } catch (e) {
-      debugPrint('Search error: $e');
-    }
   }
 
   @override
@@ -471,8 +590,8 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
                   _resolvedUsers[id] ??
                   UserEntity(
                     id: id,
-                    email: 'Unknown',
-                    name: 'Loading...',
+                    email: LangKeys.unknown.tr(),
+                    name: LangKeys.loading.tr(),
                     profile: '',
                     role: UserRole.client,
                   );

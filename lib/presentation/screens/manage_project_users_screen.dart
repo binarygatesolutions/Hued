@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hued/presentation/widgets/custom_loading.dart';
 import 'package:hued/presentation/widgets/shared_app_bar.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hued/presentation/widgets/shared_button.dart';
+import 'package:hued/presentation/widgets/shared_profile_avatar.dart';
 import 'package:ionicons/ionicons.dart';
 import '../../domain/entities/entities.dart';
 import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
 import '../blocs/project_bloc.dart';
 import '../blocs/project_event.dart';
+import '../blocs/project_state.dart';
 import '../widgets/email_search_picker.dart';
 import '../../core/utils/animations.dart';
 import 'dart:ui';
@@ -31,9 +35,12 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
   late List<String> _supervisorIds;
   late List<String> _managerIds;
   late List<String> _clientIds;
+  late List<String> _workerIds;
   bool _hasChanges = false;
   bool isLoading = true;
+  bool _isSaving = false;
   List<UserEntity> initialUsers = [];
+  Map<String, String> _workerManagerMap = {};
 
   @override
   void initState() {
@@ -41,6 +48,8 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
     _supervisorIds = List.from(widget.project.supervisorIds);
     _managerIds = List.from(widget.project.managerIds);
     _clientIds = List.from(widget.project.clientIds);
+    _workerIds = List.from(widget.project.workerIds);
+    _workerManagerMap = Map.from(widget.project.workerManagerMap);
     loadInitialUsers();
   }
 
@@ -49,6 +58,7 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
       ..._supervisorIds,
       ..._managerIds,
       ..._clientIds,
+      ..._workerIds,
     }.toList();
 
     if (allUserIds.isEmpty) {
@@ -86,19 +96,37 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
   }
 
   void _saveChanges() {
+    if (_workerIds.isNotEmpty) {
+      for (final workerId in _workerIds) {
+        final pmId = _workerManagerMap[workerId];
+        if (pmId == null || !_managerIds.contains(pmId)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Please assign a valid Project Manager for every worker.',
+              ),
+              backgroundColor: context.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+      }
+    }
+
+    _workerManagerMap.removeWhere(
+      (wId, pmId) => !_workerIds.contains(wId) || !_managerIds.contains(pmId),
+    );
+
+    setState(() => _isSaving = true);
     context.read<ProjectBloc>().add(
       UpdateProjectUsers(
         projectId: widget.project.id,
         supervisorIds: _supervisorIds,
         managerIds: _managerIds,
         clientIds: _clientIds,
-      ),
-    );
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(LangKeys.userAssignmentsUpdated.tr()),
-        behavior: SnackBarBehavior.floating,
+        workerIds: _workerIds,
+        workerManagerMap: _workerManagerMap,
       ),
     );
   }
@@ -113,33 +141,61 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
       );
     }
 
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, authState) {
-        if (authState is! Authenticated) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+    return BlocListener<ProjectBloc, ProjectState>(
+      listener: (context, state) {
+        if (_isSaving && state is ProjectInitial) {
+          context.pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(LangKeys.userAssignmentsUpdated.tr()),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else if (state is ProjectError) {
+          setState(() => _isSaving = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: context.error,
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
-
-        final user = authState.user;
-        final canManage =
-            user.role == UserRole.admin || user.role == UserRole.supervisor;
-
-        return Scaffold(
-          extendBodyBehindAppBar: true,
-          appBar: SharedAppBar(title: LangKeys.teamManagement.tr()),
-          body: Stack(
-            children: [
-              _buildBackground(context),
-              SafeArea(
-                child: canManage
-                    ? _buildManagementContent(context)
-                    : _buildRestrictedAccess(context),
-              ),
-            ],
-          ),
-        );
       },
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, authState) {
+          if (authState is! Authenticated) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final user = authState.user;
+          // Admins and supervisors manage the project team
+          final canManage =
+              user.role == UserRole.admin || user.role == UserRole.supervisor;
+
+          return Scaffold(
+            extendBodyBehindAppBar: true,
+            appBar: SharedAppBar(title: LangKeys.teamManagement.tr()),
+            body: Stack(
+              children: [
+                _buildBackground(context),
+                SafeArea(
+                  child: canManage
+                      ? _buildManagementContent(context)
+                      : _buildRestrictedAccess(context),
+                ),
+                if (_isSaving)
+                  Container(
+                    color: Colors.black.withOpacity(0.3),
+                    child: const Center(child: CustomLoading()),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -297,6 +353,33 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
                         _hasChanges = true;
                       }),
                     ).animateEntrance(delayMs: 600),
+
+                    if (_workerIds.isNotEmpty && _managerIds.isNotEmpty) ...[
+                      const SizedBox(height: 40),
+                      _buildSectionHeader(
+                        'Workers',
+                        Ionicons.construct_outline,
+                      ).animateEntrance(delayMs: 700),
+                      const SizedBox(height: 20),
+                      _buildPickerWithLabel(
+                        label: 'Workers',
+                        ids: _workerIds,
+                        role: UserRole.worker,
+                        onChanged: (ids) => setState(() {
+                          _workerIds = ids;
+                          _hasChanges = true;
+                        }),
+                      ).animateEntrance(delayMs: 800),
+                      const SizedBox(height: 32),
+                      _buildSectionHeader(
+                        'Worker Assignments',
+                        Ionicons.git_branch_outline,
+                      ).animateEntrance(delayMs: 900),
+                      const SizedBox(height: 16),
+                      _buildWorkerManagerMapping().animateEntrance(
+                        delayMs: 1000,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -316,7 +399,10 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
 
   Widget _buildHeroHeader(BuildContext context) {
     final totalTeam =
-        _supervisorIds.length + _managerIds.length + _clientIds.length;
+        _supervisorIds.length +
+        _managerIds.length +
+        _clientIds.length +
+        _workerIds.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -326,7 +412,6 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
             fontSize: 32,
             fontWeight: FontWeight.w900,
             color: context.onSurface,
-            letterSpacing: -1,
             height: 1.1,
           ),
         ),
@@ -398,7 +483,6 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
                   fontSize: 8,
                   fontWeight: FontWeight.w900,
                   color: context.onSurface.withOpacity(0.3),
-                  letterSpacing: 0.5,
                 ),
               ),
             ],
@@ -420,7 +504,7 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
         MultiEmailSearchPicker(
           label: label,
           initialSelectedIds: ids,
-          filterRole: role,
+          filterRoles: [role],
           onChanged: onChanged,
           initialUsers: initialUsers,
         ),
@@ -461,36 +545,120 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
   }
 
   Widget _buildSaveButton(BuildContext context) {
-    return Container(
-          child: ElevatedButton(
-            onPressed: _saveChanges,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              elevation: 0,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Ionicons.save_outline, size: 20),
-                const SizedBox(width: 12),
-                Text(
-                  LangKeys.updateTeam.tr(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
+    return SharedButton(
+      onPressed: _saveChanges,
+      text: LangKeys.updateTeam.tr(),
+    );
+  }
+
+  Widget _buildWorkerManagerMapping() {
+    final availableManagers = initialUsers
+        .where((u) => _managerIds.contains(u.id))
+        .toList();
+
+    return Column(
+      children: _workerIds.map((workerId) {
+        final worker = initialUsers.firstWhere(
+          (u) => u.id == workerId,
+          orElse: () => UserEntity(
+            id: workerId,
+            name: 'Unknown Worker',
+            email: '',
+            role: UserRole.worker,
+            profile: '',
+          ),
+        );
+
+        final assignedManagerId = _workerManagerMap[workerId];
+        final isValidManager =
+            assignedManagerId != null &&
+            _managerIds.contains(assignedManagerId);
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: context.surface.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isValidManager
+                  ? context.primary.withOpacity(0.1)
+                  : context.error.withOpacity(0.3),
             ),
           ),
-        )
-        .animate(onPlay: (c) => c.repeat())
-        .shimmer(duration: 3.seconds, color: Colors.white.withOpacity(0.1));
+          child: Row(
+            children: [
+              SharedProfileAvatar(
+                name: worker.name,
+                radius: 16,
+                showBorder: false,
+                imageUrl: worker.profile,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      worker.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      'Worker',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: context.onSurface.withOpacity(0.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Ionicons.arrow_forward_outline,
+                size: 14,
+                color: context.onSurface.withOpacity(0.3),
+              ),
+              const SizedBox(width: 8),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: isValidManager ? assignedManagerId : null,
+                  hint: Text(
+                    'Select PM',
+                    style: TextStyle(fontSize: 12, color: context.error),
+                  ),
+                  icon: Icon(
+                    Ionicons.chevron_down,
+                    size: 16,
+                    color: context.onSurface.withOpacity(0.5),
+                  ),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: context.primary,
+                  ),
+                  dropdownColor: context.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  items: availableManagers.map((pm) {
+                    return DropdownMenuItem(value: pm.id, child: Text(pm.name));
+                  }).toList(),
+                  onChanged: (newPmId) {
+                    if (newPmId != null) {
+                      setState(() {
+                        _workerManagerMap[workerId] = newPmId;
+                        _hasChanges = true;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
   }
 }

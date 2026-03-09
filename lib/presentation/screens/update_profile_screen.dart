@@ -35,10 +35,16 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   @override
   void initState() {
     super.initState();
-    final user = (context.read<AuthBloc>().state as Authenticated).user;
-    _nameController = TextEditingController(text: user.name);
-    _emailController = TextEditingController(text: user.email);
-    profileImgUrl = user.profile;
+    final state = context.read<AuthBloc>().state;
+    if (state is Authenticated) {
+      final user = state.user;
+      _nameController = TextEditingController(text: user.name);
+      _emailController = TextEditingController(text: user.email);
+      profileImgUrl = user.profile;
+    } else {
+      _nameController = TextEditingController();
+      _emailController = TextEditingController();
+    }
   }
 
   @override

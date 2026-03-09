@@ -11,18 +11,19 @@ class TaskCard extends StatelessWidget {
   final TaskEntity task;
   final VoidCallback onTap;
   final Map<String, UserEntity> users;
+  final bool isMyWorkerAssigned;
 
   const TaskCard({
     super.key,
     required this.task,
     required this.onTap,
     required this.users,
+    this.isMyWorkerAssigned = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(task.status, context);
-    final creator = users[task.creatorId];
 
     return PremiumCard(
       margin: const EdgeInsets.only(bottom: 16),
@@ -72,7 +73,6 @@ class TaskCard extends StatelessWidget {
                               color: Colors.white,
                               fontSize: 9,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
                             ),
                           ),
                         ],
@@ -147,42 +147,19 @@ class TaskCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      if (creator?.profile != null)
-                        CircleAvatar(
-                          radius: 10,
-                          backgroundImage: CachedNetworkImageProvider(
-                            creator!.profile!,
-                          ),
-                        )
+                      // Stacked worker avatars
+                      if (task.assignedWorkerIds.isNotEmpty)
+                        _buildWorkerAvatars(context)
                       else
-                        CircleAvatar(
-                          radius: 10,
-                          backgroundColor: context.primary.withOpacity(0.1),
-                          child: Text(
-                            creator?.name.substring(0, 1).toUpperCase() ?? '?',
-                            style: TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
-                              color: context.primary,
-                            ),
+                        Text(
+                          LangKeys.unknown.tr(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: context.onSurface.withOpacity(0.4),
                           ),
                         ),
-                      const SizedBox(width: 8),
-                      Text(
-                        LangKeys.createdBy.tr(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: context.onSurface.withOpacity(0.4),
-                        ),
-                      ),
-                      Text(
-                        creator?.name ?? LangKeys.unknown.tr(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: context.onSurface.withOpacity(0.7),
-                        ),
-                      ),
+                      const Spacer(),
                     ],
                   ),
                 ],
@@ -190,6 +167,102 @@ class TaskCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildWorkerAvatars(BuildContext context) {
+    const double radius = 12;
+    const double overlap = 8;
+    const int maxVisible = 4;
+
+    final workerIds = task.assignedWorkerIds;
+    final visibleCount = workerIds.length > maxVisible
+        ? maxVisible
+        : workerIds.length;
+    final overflowCount = workerIds.length - visibleCount;
+
+    // Palette for distinctly colored initials circles
+    final palette = [
+      context.primary,
+      context.purple,
+      context.mintGreen,
+      context.secondary,
+    ];
+
+    final double totalWidth =
+        (radius * 2) +
+        (visibleCount - 1) * (radius * 2 - overlap) +
+        (overflowCount > 0 ? (radius * 2 - overlap) : 0);
+
+    return SizedBox(
+      width: totalWidth,
+      height: radius * 2,
+      child: Stack(
+        children: [
+          for (int i = 0; i < visibleCount; i++)
+            Builder(
+              builder: (context) {
+                final hasId = i < task.assignedWorkerIds.length;
+                final workerId = hasId ? task.assignedWorkerIds[i] : null;
+                final worker = workerId != null ? users[workerId] : null;
+                final profileUrl = worker?.profile;
+                final name = worker?.name ?? '';
+
+                return Positioned(
+                  left: i * (radius * 2 - overlap),
+                  child: Container(
+                    width: radius * 2,
+                    height: radius * 2,
+                    decoration: BoxDecoration(
+                      color: palette[i % palette.length].withOpacity(0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: context.surface, width: 1.5),
+                      image: profileUrl != null
+                          ? DecorationImage(
+                              image: CachedNetworkImageProvider(profileUrl),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    alignment: Alignment.center,
+                    child: profileUrl == null
+                        ? Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: palette[i % palette.length],
+                            ),
+                          )
+                        : null,
+                  ),
+                );
+              },
+            ),
+          if (overflowCount > 0)
+            Positioned(
+              left: visibleCount * (radius * 2 - overlap),
+              child: Container(
+                width: radius * 2,
+                height: radius * 2,
+                decoration: BoxDecoration(
+                  color: context.onSurface.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: context.surface, width: 1.5),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '+$overflowCount',
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w800,
+                    color: context.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

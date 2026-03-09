@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/theme_ext.dart';
+import 'package:easy_localization/easy_localization.dart';
+import '../../core/localization/lang_keys.dart';
 
 class ProjectSectionHeader extends StatelessWidget {
   final String title;
@@ -7,6 +9,7 @@ class ProjectSectionHeader extends StatelessWidget {
   final Color color;
   final IconData? icon;
   final Widget? trailing;
+  final VoidCallback? onViewAll;
 
   const ProjectSectionHeader({
     super.key,
@@ -15,6 +18,7 @@ class ProjectSectionHeader extends StatelessWidget {
     required this.color,
     this.icon,
     this.trailing,
+    this.onViewAll,
   });
 
   @override
@@ -57,6 +61,26 @@ class ProjectSectionHeader extends StatelessWidget {
             ),
           ),
         const Spacer(),
+        if (onViewAll != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton(
+              onPressed: onViewAll,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                LangKeys.viewAll.tr(),
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
         if (trailing != null) trailing!,
       ],
     );

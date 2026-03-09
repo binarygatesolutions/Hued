@@ -5,12 +5,14 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:easy_localization/easy_localization.dart';
+
 import '../../core/localization/lang_keys.dart';
 import 'package:hued/presentation/widgets/shared_app_bar.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../widgets/task_team_card.dart';
 import '../../core/utils/animations.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/entities.dart';
@@ -22,6 +24,7 @@ import '../blocs/project_event.dart';
 import '../blocs/project_state.dart';
 import '../widgets/custom_loading.dart';
 import '../widgets/premium_card.dart';
+import '../widgets/approval_request_card.dart';
 import '../widgets/shared_smart_refresher.dart';
 import '../../domain/repositories/project_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -89,92 +92,121 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     }
     final user = authState.user;
 
-    return BlocBuilder<SyncBloc, SyncState>(
-      builder: (context, syncState) {
-        final syncedTask = (syncState is TaskSynced) ? syncState.task : null;
-
-        return StreamBuilder<ProjectEntity>(
-          stream: context.read<ProjectRepository>().getProjectStream(
-            widget.projectId,
-          ),
-          builder: (context, projectSnapshot) {
-            if (projectSnapshot.connectionState == ConnectionState.waiting &&
-                !projectSnapshot.hasData) {
-              return const Scaffold(body: CustomLoading());
-            }
-            final project = projectSnapshot.data;
-            if (project == null) {
-              return Scaffold(
-                body: Center(child: Text(LangKeys.projectNotFound.tr())),
-              );
-            }
-
-            return StreamBuilder<TaskEntity>(
-              stream: context.read<ProjectRepository>().getTaskStream(
-                widget.projectId,
-                widget.taskId,
-              ),
-              builder: (context, taskSnapshot) {
-                if (taskSnapshot.connectionState == ConnectionState.waiting &&
-                    !taskSnapshot.hasData) {
-                  return const Scaffold(body: CustomLoading());
-                }
-
-                final task = syncedTask ?? taskSnapshot.data;
-
-                if (task == null) {
-                  return Scaffold(
-                    body: Center(child: Text(LangKeys.taskNotFound.tr())),
-                  );
-                }
-
-                return FutureBuilder<Map<String, UserEntity>>(
-                  future: _fetchUsers(context, [
-                    ...project.assignedUserIds,
-                    project.creatorId,
-                  ]),
-                  builder: (context, usersSnapshot) {
-                    final users = usersSnapshot.data ?? {};
-
-                    return BlocBuilder<ActivityBloc, ActivityState>(
-                      builder: (context, activityState) {
-                        final taskActivities = (activityState is ActivityLoaded)
-                            ? activityState.activities
-                            : <ActivityEntity>[];
-
-                        return FutureBuilder<List<AttachmentEntity>>(
-                          future: context
-                              .read<ProjectRepository>()
-                              .getTaskAttachments(
-                                widget.projectId,
-                                widget.taskId,
-                              ),
-                          builder: (context, attachmentSnapshot) {
-                            final taskAttachments =
-                                attachmentSnapshot.data ?? [];
-
-                            return _buildScaffold(
-                              context: context,
-                              task: task,
-                              activities: taskActivities,
-                              attachments: taskAttachments,
-                              user: user,
-                              projectId: project.id,
-                              users: users,
-                              controller: commentController,
-                              enablePullUp: false,
-                            );
-                          },
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            );
-          },
-        );
+    return BlocListener<ProjectBloc, ProjectState>(
+      listener: (context, state) {
+        if (state is ProjectError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: context.error,
+            ),
+          );
+        }
       },
+      child: BlocBuilder<SyncBloc, SyncState>(
+        builder: (context, syncState) {
+          final syncedTask = (syncState is TaskSynced) ? syncState.task : null;
+
+          return StreamBuilder<ProjectEntity>(
+            stream: context.read<ProjectRepository>().getProjectStream(
+              widget.projectId,
+            ),
+            builder: (context, projectSnapshot) {
+              if (projectSnapshot.connectionState == ConnectionState.waiting &&
+                  !projectSnapshot.hasData) {
+                return const Scaffold(body: CustomLoading());
+              }
+              final project = projectSnapshot.data;
+              if (project == null) {
+                return Scaffold(
+                  body: Center(child: Text(LangKeys.projectNotFound.tr())),
+                );
+              }
+
+              return StreamBuilder<TaskEntity>(
+                stream: context.read<ProjectRepository>().getTaskStream(
+                  widget.projectId,
+                  widget.taskId,
+                ),
+                builder: (context, taskSnapshot) {
+                  if (taskSnapshot.connectionState == ConnectionState.waiting &&
+                      !taskSnapshot.hasData) {
+                    return const Scaffold(body: CustomLoading());
+                  }
+
+                  final task = syncedTask ?? taskSnapshot.data;
+
+                  if (task == null) {
+                    return Scaffold(
+                      body: Center(child: Text(LangKeys.taskNotFound.tr())),
+                    );
+                  }
+
+                  return FutureBuilder<Map<String, UserEntity>>(
+                    future: _fetchUsers(context, [
+                      ...project.assignedUserIds,
+                      ...project.workerIds,
+                      ...task.assignedWorkerIds,
+                      project.creatorId,
+                    ]),
+                    builder: (context, usersSnapshot) {
+                      final users = usersSnapshot.data ?? {};
+
+                      return BlocBuilder<ActivityBloc, ActivityState>(
+                        builder: (context, activityState) {
+                          final taskActivities =
+                              (activityState is ActivityLoaded)
+                              ? activityState.activities
+                              : <ActivityEntity>[];
+
+                          return StreamBuilder<List<RequestEntity>>(
+                            stream: context
+                                .read<ProjectRepository>()
+                                .getTaskPendingRequestsStream(
+                                  widget.projectId,
+                                  widget.taskId,
+                                ),
+                            builder: (context, requestsSnapshot) {
+                              final pendingRequests =
+                                  requestsSnapshot.data ?? [];
+
+                              return FutureBuilder<List<AttachmentEntity>>(
+                                future: context
+                                    .read<ProjectRepository>()
+                                    .getTaskAttachments(
+                                      widget.projectId,
+                                      widget.taskId,
+                                    ),
+                                builder: (context, attachmentSnapshot) {
+                                  final taskAttachments =
+                                      attachmentSnapshot.data ?? [];
+
+                                  return _buildScaffold(
+                                    context: context,
+                                    task: task,
+                                    activities: taskActivities,
+                                    attachments: taskAttachments,
+                                    pendingRequests: pendingRequests,
+                                    user: user,
+                                    project: project,
+                                    users: users,
+                                    controller: commentController,
+                                    enablePullUp: false,
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -194,12 +226,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     required TaskEntity task,
     required List<ActivityEntity> activities,
     required List<AttachmentEntity> attachments,
+    required List<RequestEntity> pendingRequests,
     required UserEntity user,
-    required String projectId,
+    required ProjectEntity project,
     required Map<String, UserEntity> users,
     required TextEditingController controller,
     required bool enablePullUp,
   }) {
+    final projectId = project.id;
+    final hasPendingRequest = pendingRequests.isNotEmpty;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: SharedAppBar(
@@ -246,17 +282,48 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   context,
                                   task,
                                 ).animateEntrance(delayMs: 200),
+                                const SizedBox(height: 32),
+                                TaskTeamCard(
+                                  task: task,
+                                  users: users,
+                                  currentUser: user,
+                                  projectWorkerIds: project.workerIds,
+                                  onWorkersUpdated: (newWorkerIds) {
+                                    context.read<ProjectBloc>().add(
+                                      AssignWorkersToTask(
+                                        projectId: projectId,
+                                        taskId: task.id,
+                                        workerIds: newWorkerIds,
+                                      ),
+                                    );
+                                  },
+                                ).animateEntrance(delayMs: 250),
+
+                                if (hasPendingRequest)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 32),
+                                    child: ApprovalRequestCard(
+                                      request: pendingRequests.first,
+                                      isCompact: true,
+                                    ).animateEntrance(delayMs: 250),
+                                  ),
 
                                 if (task.isApproved)
-                                  _buildStatusControl(
-                                    context,
-                                    projectId,
-                                    task,
-                                    user,
+                                  AbsorbPointer(
+                                    absorbing: hasPendingRequest,
+                                    child: Opacity(
+                                      opacity: hasPendingRequest ? 0.5 : 1.0,
+                                      child: _buildStatusControl(
+                                        context,
+                                        projectId,
+                                        task,
+                                        user,
+                                      ),
+                                    ),
                                   ).animateEntrance(delayMs: 300),
 
                                 _buildAttachments(context, attachments, users),
-                                const SizedBox(height: 48),
+                                const SizedBox(height: 30),
                                 _buildActivitySection(
                                   context,
                                   task,
@@ -330,33 +397,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 ),
               ),
             ).animateScale(),
-
-          // Client Approval (for completed tasks)
-          if (task.status == TaskStatus.completed &&
-              task.isApproved && // Already approved initial creation
-              user.role == UserRole.client)
-            _buildApprovalFooter(
-              context,
-              projectId,
-              task.id,
-              title: LangKeys.acceptWorkResult.tr(),
-              onApprove: () => context.read<ProjectBloc>().add(
-                UpdateTaskStatus(
-                  projectId: projectId,
-                  taskId: task.id,
-                  status: TaskStatus.completed.name,
-                  userId: user.id,
-                ),
-              ), // This is simplified
-              onReject: () => context.read<ProjectBloc>().add(
-                UpdateTaskStatus(
-                  projectId: projectId,
-                  taskId: task.id,
-                  status: TaskStatus.inProgress.name,
-                  userId: user.id,
-                ),
-              ),
-            ).animateScale(),
         ],
       ),
     );
@@ -410,7 +450,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           color: Colors.white,
                           fontSize: 9,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
                         ),
                       ),
                     ],
@@ -510,7 +549,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           fontSize: 10,
           color: color,
           fontWeight: FontWeight.w800,
-          letterSpacing: 0.5,
         ),
       ),
     );
@@ -771,7 +809,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     UserEntity user,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(top: 32),
+      padding: const EdgeInsets.only(top: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

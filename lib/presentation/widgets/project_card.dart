@@ -10,8 +10,14 @@ import '../../core/localization/lang_keys.dart';
 class ProjectCard extends StatelessWidget {
   final ProjectEntity project;
   final VoidCallback onTap;
+  final Widget? trailing;
 
-  const ProjectCard({super.key, required this.project, required this.onTap});
+  const ProjectCard({
+    super.key,
+    required this.project,
+    required this.onTap,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +25,8 @@ class ProjectCard extends StatelessWidget {
         ? Colors.green
         : project.status == ProjectStatus.canceled
         ? context.error
+        : project.status == ProjectStatus.archived
+        ? context.onSurface.withOpacity(0.4)
         : context.secondary;
 
     return PremiumCard(
@@ -61,31 +69,37 @@ class ProjectCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(100),
-                              border: Border.all(
-                                color: statusColor.withOpacity(0.2),
+                          if (trailing != null) ...[
+                            const SizedBox(width: 8),
+                            trailing!,
+                          ] else
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(100),
+                                border: Border.all(
+                                  color: statusColor.withOpacity(0.2),
+                                ),
+                              ),
+                              child: Text(
+                                project.status == ProjectStatus.finished
+                                    ? LangKeys.finished.tr()
+                                    : project.status == ProjectStatus.canceled
+                                    ? LangKeys.canceled.tr()
+                                    : project.status == ProjectStatus.archived
+                                    ? LangKeys.archived.tr()
+                                    : LangKeys.active.tr(),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w400,
+                                  color: statusColor,
+                                ),
                               ),
                             ),
-                            child: Text(
-                              project.status == ProjectStatus.finished
-                                  ? LangKeys.finished.tr()
-                                  : project.status == ProjectStatus.canceled
-                                  ? LangKeys.canceled.tr()
-                                  : LangKeys.active.tr(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                                color: statusColor,
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 12),

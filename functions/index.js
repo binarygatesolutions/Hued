@@ -106,8 +106,8 @@ exports.onProjectStatusUpdatedSystem = onDocumentUpdated("projects/{projectId}",
     }
 
     // Check member additions
-    const oldMembersCount = (oldData.supervisorIds?.length || 0) + (oldData.managerIds?.length || 0) + (oldData.clientIds?.length || 0);
-    const newMembersCount = (newData.supervisorIds?.length || 0) + (newData.managerIds?.length || 0) + (newData.clientIds?.length || 0);
+    const oldMembersCount = (oldData.supervisorIds?.length || 0) + (oldData.managerIds?.length || 0) + (oldData.clientIds?.length || 0) + (oldData.workerIds?.length || 0);
+    const newMembersCount = (newData.supervisorIds?.length || 0) + (newData.managerIds?.length || 0) + (newData.clientIds?.length || 0) + (newData.workerIds?.length || 0);
 
     if (newMembersCount !== oldMembersCount) {
         promises.push(activityCollection.doc().set({
@@ -260,6 +260,7 @@ exports.onProjectAssignedNotify = onDocumentUpdated("projects/{projectId}", asyn
         ...(oldData.supervisorIds || []),
         ...(oldData.managerIds || []),
         ...(oldData.clientIds || []),
+        ...(oldData.workerIds || []),
     ]);
 
     const newAssigned = [
@@ -267,6 +268,7 @@ exports.onProjectAssignedNotify = onDocumentUpdated("projects/{projectId}", asyn
         ...(newData.supervisorIds || []),
         ...(newData.managerIds || []),
         ...(newData.clientIds || []),
+        ...(newData.workerIds || []),
     ];
 
     // Users that are newly assigned (not in old list)
@@ -305,6 +307,7 @@ exports.onTaskCreatedNotify = onDocumentCreated("projects/{projectId}/tasks/{tas
         ...(projectData.assignedUserIds || []),
         ...(projectData.supervisorIds || []),
         ...(projectData.managerIds || []),
+        ...(projectData.workerIds || []),
     ].filter((uid) => uid !== creatorId); // don't notify the creator
 
     await sendNotificationToUsers(
@@ -438,6 +441,7 @@ exports.onProjectStatusChangedNotify = onDocumentUpdated("projects/{projectId}",
         ...(newData.supervisorIds || []),
         ...(newData.managerIds || []),
         ...(newData.clientIds || []),
+        ...(newData.workerIds || []),
     ].filter((uid) => uid !== updatedBy);
 
     await sendNotificationToUsers(
@@ -447,5 +451,163 @@ exports.onProjectStatusChangedNotify = onDocumentUpdated("projects/{projectId}",
         "projectStatusChanged",
         { projectId, status: newData.status },
     );
+    return null;
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEQUENTIAL APPROVAL SYSTEM (new)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// R1. Request created — notify first batch of approvers
+exports.onRequestCreated = onDocumentCreated("requests/{requestId}", async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+    const requestData = snap.data();
+    const requestId = event.params.requestId;
+
+    const projectId = requestData.projectId;
+    const initiatorId = requestData.initiatorId;
+    const requiredApprovers = requestData.requiredApproverIds || [];
+
+    // LOG ACTIVITY
+    await db.collection("projects").doc(projectId).collection("activities").add({
+        userId: initiatorId,
+        type: "requestCreated",
+        content: `${requestData.type}|${requestData.targetStatus}`,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    if (requiredApprovers.length === 0) return null;
+    // ... (rest of notification logic remains)
+    let body = "";
+    if (requestData.type === "taskStatus") {
+        const taskSnap = await db.collection("projects").doc(projectId).collection("tasks").doc(requestData.taskId).get();
+        const taskTitle = taskSnap.exists ? taskSnap.data().title : "Task";
+        body = `Approval requested for "${taskTitle}" status change to ${requestData.targetStatus}`;
+    } else {
+        const projectSnap = await db.collection("projects").doc(projectId).get();
+        const projectTitle = projectSnap.exists ? projectSnap.data().title : "Project";
+        body = `Approval requested to mark "${projectTitle}" as ${requestData.targetStatus}`;
+    }
+
+    await sendNotificationToUsers(
+        requiredApprovers,
+        "New Approval Request",
+        body,
+        "newApprovalRequest",
+        { requestId, projectId }
+    );
+    return null;
+});
+
+// R2. Request updated — handle approval steps and execution
+exports.onRequestUpdated = onDocumentUpdated("requests/{requestId}", async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+    const newData = snap.after.data();
+    const oldData = snap.before.data();
+    const requestId = event.params.requestId;
+
+    // Only react if status changed
+    if (newData.status === oldData.status) return null;
+
+    const projectId = newData.projectId;
+
+    // Handle rejection
+    if (newData.status === "rejected") {
+        // LOG ACTIVITY
+        await db.collection("projects").doc(projectId).collection("activities").add({
+            userId: newData.lastUpdatedBy || "system", // The one who rejected
+            type: "requestRejected",
+            content: newData.rejectionReason || "No reason provided",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        await sendNotificationToUser(
+            newData.initiatorId,
+            "Request Rejected ❌",
+            `Your request for ${newData.type} change was rejected. Reason: ${newData.rejectionReason || "None"}`,
+            "requestRejected",
+            { requestId }
+        );
+        return null;
+    }
+
+    // Handle approval
+    if (newData.status === "approved") {
+        const projectSnap = await db.collection("projects").doc(projectId).get();
+        if (!projectSnap.exists) return null;
+        const projectData = projectSnap.data();
+
+        // LOG ACTIVITY (Step approved)
+        await db.collection("projects").doc(projectId).collection("activities").add({
+            userId: newData.lastUpdatedBy || "system",
+            type: "requestApprovedStep",
+            content: `${oldData.currentStep}|${newData.type}`,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        let nextStep = null;
+        let nextApprovers = [];
+
+        // Determine next step based on CURRENT step and available roles
+        // Logic: PM -> Supervisor -> Client -> Executed
+        if (newData.currentStep === "pm") {
+            nextStep = "supervisor";
+            nextApprovers = projectData.supervisorIds || [];
+        } else if (newData.currentStep === "supervisor") {
+            nextStep = "client";
+            nextApprovers = projectData.clientIds || [];
+        } else if (newData.currentStep === "client") {
+            nextStep = "executed";
+        }
+
+        if (nextStep === "executed") {
+            // FINISH LINE: Execute the status change
+            if (newData.type === "taskStatus") {
+                await db.collection("projects").doc(projectId).collection("tasks").doc(newData.taskId).update({
+                    status: newData.targetStatus,
+                    lastUpdatedBy: "system_approval"
+                });
+            } else if (newData.type === "projectStatus") {
+                await db.collection("projects").doc(projectId).update({
+                    status: newData.targetStatus,
+                    lastUpdatedBy: "system_approval"
+                });
+            }
+
+            await sendNotificationToUser(
+                newData.initiatorId,
+                "Request Approved ✅",
+                `Your request has been successfully executed.`,
+                "requestExecuted",
+                { requestId, projectId }
+            );
+        } else if (nextStep && nextApprovers.length > 0) {
+            // MOVE TO NEXT STEP
+            await db.collection("requests").doc(requestId).update({
+                currentStep: nextStep,
+                requiredApproverIds: nextApprovers,
+                status: "pending", // Reset to pending for the next step
+                // Keep approvedBy history
+            });
+
+            // Notify new approvers
+            let body = `Agreement needed for ${newData.type} change to ${newData.targetStatus}`;
+            await sendNotificationToUsers(
+                nextApprovers,
+                "Approval Escalated",
+                body,
+                "newApprovalRequest",
+                { requestId, projectId }
+            );
+        } else {
+            // No next approvers found, skip to next or execute
+            await db.collection("requests").doc(requestId).update({
+                currentStep: nextStep,
+                status: "approved"
+            });
+        }
+    }
     return null;
 });

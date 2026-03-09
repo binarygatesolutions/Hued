@@ -1,11 +1,11 @@
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_pagination/firebase_pagination.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:hued/presentation/blocs/project_event.dart';
 import '../../core/localization/lang_keys.dart';
 import 'package:hued/core/navigation/app_router.dart';
 import 'package:ionicons/ionicons.dart';
@@ -20,6 +20,9 @@ import '../widgets/shared_app_logo.dart';
 import '../../domain/entities/entities.dart';
 import '../../core/theme/theme_ext.dart';
 import '../widgets/premium_card.dart';
+import '../widgets/approval_request_card.dart';
+import '../widgets/shared_smart_refresher.dart';
+import 'package:pull_to_refresh_flutter3/pull_to_refresh_flutter3.dart';
 import 'package:hued/core/utils/animations.dart';
 
 int _activeProjects = 0;
@@ -34,44 +37,74 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  Key _paginationKey = UniqueKey();
+  final RefreshController _refreshController = RefreshController(
+    initialRefresh: false,
+  );
 
   @override
   void initState() {
     super.initState();
+
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) _loadInitialData(authState.user);
+  }
+
+  Future<void> _onLoading() async {
+    final state = context.read<ProjectBloc>().state;
+    if (!state.hasMore) {
+      _refreshController.loadNoData();
+      return;
+    }
+
     final authState = context.read<AuthBloc>().state;
     if (authState is Authenticated) {
-      getStatistics();
+      context.read<ProjectBloc>().add(
+        LoadMoreProjects(userId: authState.user.id, role: authState.user.role),
+      );
+      context.read<ProjectBloc>().add(LoadPendingRequests(authState.user.id));
     }
+  }
+
+  void _loadInitialData(UserEntity user) {
+    getStatistics(user);
+    context.read<ProjectBloc>().add(
+      LoadProjects(userId: user.id, role: user.role),
+    );
+    context.read<ProjectBloc>().add(LoadPendingRequests(user.id));
   }
 
   @override
   void dispose() {
+    _refreshController.dispose();
     super.dispose();
   }
 
   Future<void> _onRefresh(UserEntity user) async {
-    setState(() {
-      _paginationKey = UniqueKey();
-    });
-    await getStatistics();
+    _loadInitialData(user);
+    await getStatistics(user);
   }
 
-  Future<void> getStatistics() async {
-    final projectsCollection = FirebaseFirestore.instance.collection(
-      'projects',
-    );
+  Future<void> getStatistics(UserEntity user) async {
+    final col = FirebaseFirestore.instance.collection('projects');
+
+    // For non-admins, scope queries to projects they are assigned to.
+    final bool isAdmin = user.role == UserRole.admin;
+
+    Query<Map<String, dynamic>> base = col;
+    if (!isAdmin) {
+      base = col.where('assignedUserIds', arrayContains: user.id);
+    }
 
     final results = await Future.wait([
-      projectsCollection
+      base
           .where('status', isEqualTo: ProjectStatus.finished.name)
           .count()
           .get(),
-      projectsCollection
+      base
           .where('status', isEqualTo: ProjectStatus.inProgress.name)
           .count()
           .get(),
-      projectsCollection
+      base
           .where('status', isEqualTo: ProjectStatus.canceled.name)
           .count()
           .get(),
@@ -86,12 +119,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is Authenticated) {
-          getStatistics();
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state is Authenticated) {
+              _loadInitialData(state.user);
+              context.read<ProjectBloc>().add(
+                LoadPendingRequests(state.user.id),
+              );
+            }
+          },
+        ),
+        BlocListener<ProjectBloc, ProjectState>(
+          listener: (context, state) {
+            if (!state.isInitialLoading) {
+              _refreshController.refreshCompleted();
+            }
+            if (!state.isLoadingMore) {
+              if (state.hasMore) {
+                _refreshController.loadComplete();
+              } else {
+                _refreshController.loadNoData();
+              }
+            }
+          },
+        ),
+      ],
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
           if (state is Authenticated) {
@@ -171,78 +225,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           // Main Content
           Positioned.fill(
-            child: BlocBuilder<ProjectBloc, ProjectState>(
-              builder: (context, state) {
-                return Column(
-                  children: [
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: () => _onRefresh(user),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+            child: SharedSmartRefresher(
+              controller: _refreshController,
+              enablePullUp: true,
+
+              onRefresh: () => _onRefresh(user),
+              onLoading: _onLoading,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        24,
+                        MediaQuery.of(context).viewPadding.top + 20,
+                        24,
+                        0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
                             children: [
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(
-                                  24,
-                                  MediaQuery.of(context).viewPadding.top + 20,
-                                  24,
-                                  0,
+                              SharedAppLogo(height: 20),
+                              const SizedBox(width: 7),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
                                 ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        SharedAppLogo(height: 20),
-                                        SizedBox(width: 7),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: context.primary.withOpacity(
-                                              0.1,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            border: Border.all(
-                                              color: context.primary
-                                                  .withOpacity(0.2),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            user.role.name.toUpperCase(),
-                                            style: TextStyle(
-                                              color: context.primary,
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w900,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    _buildNotificationIcon(context, user),
-                                  ],
+                                decoration: BoxDecoration(
+                                  color: context.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: context.primary.withOpacity(0.2),
+                                  ),
+                                ),
+                                child: Text(
+                                  user.role.name.toUpperCase(),
+                                  style: TextStyle(
+                                    color: context.primary,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
                               ),
-                              _buildPersonalizedHeader(context, user),
-                              _buildQuickStats(context, state),
-                              const SizedBox(height: 16),
-                              _buildProjectHeader(context),
-                              _buildProjectGrid(context, user),
                             ],
                           ),
-                        ),
+                          _buildNotificationIcon(context, user),
+                        ],
                       ),
                     ),
-                  ],
-                );
-              },
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildPersonalizedHeader(context, user),
+                  ),
+                  SliverToBoxAdapter(
+                    child: BlocBuilder<ProjectBloc, ProjectState>(
+                      builder: (context, state) => Column(
+                        children: [
+                          _buildPendingApprovals(context, state),
+                          _buildQuickStats(context, state),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  SliverToBoxAdapter(child: _buildProjectHeader(context)),
+                  SliverToBoxAdapter(child: _buildProjectGrid(context, user)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              ),
             ),
           ),
         ],
@@ -251,68 +304,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildProjectGrid(BuildContext context, UserEntity user) {
-    Query query = FirebaseFirestore.instance
-        .collection('projects')
-        .orderBy('createdAt', descending: true);
+    return BlocBuilder<ProjectBloc, ProjectState>(
+      builder: (context, state) {
+        if (state.isInitialLoading && state.projects.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: CustomLoading(),
+          );
+        }
 
-    if (user.role != UserRole.admin) {
-      query = query.where('assignedUserIds', arrayContains: user.id);
-    }
+        if (!state.isInitialLoading && state.projects.isEmpty) {
+          return _buildEmptyState(context);
+        }
 
-    return FirestorePagination(
-      key: _paginationKey,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      query: query,
-      itemBuilder: (context, snapshots, index) {
-        final data = snapshots[index].data() as Map<String, dynamic>;
-        data['id'] = snapshots[index].id;
-        final project = ProjectEntity.fromJson(data);
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          itemCount: state.projects.length + (state.hasMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index >= state.projects.length) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              );
+            }
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 24),
-          child:
-              ProjectCard(
-                    project: project,
-                    onTap: () => context.pushNamed(
-                      AppRouter.projectDetails,
-                      extra: project,
-                      pathParameters: {'id': project.id},
-                    ),
-                  )
-                  .animate()
-                  .fadeIn(delay: (index % 10 * 50).ms)
-                  .slideY(begin: 0.1, curve: Curves.easeOutCubic),
+            final project = state.projects[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child:
+                  ProjectCard(
+                        project: project,
+                        onTap: () => context.pushNamed(
+                          AppRouter.projectDetails,
+                          extra: project,
+                          pathParameters: {'id': project.id},
+                        ),
+                      )
+                      .animate()
+                      .fadeIn(delay: (index % 10 * 50).ms)
+                      .slideY(begin: 0.1, curve: Curves.easeOutCubic),
+            );
+          },
         );
       },
-      initialLoader: const CustomLoading(),
-      bottomLoader: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: CircularProgressIndicator(),
-        ),
-      ),
-      onEmpty: _buildEmptyState(context),
     );
   }
 
   Widget _buildProjectHeader(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
     if (authState is! Authenticated) return const SizedBox.shrink();
-    final user = authState.user;
-
-    Query countQuery = FirebaseFirestore.instance.collection('projects');
-    if (user.role != UserRole.admin) {
-      countQuery = countQuery.where('assignedUserIds', arrayContains: user.id);
-    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: FutureBuilder<AggregateQuerySnapshot>(
-        future: countQuery.count().get(),
-        builder: (context, snapshot) {
-          final count = snapshot.data?.count ?? 0;
+      child: BlocBuilder<ProjectBloc, ProjectState>(
+        builder: (context, state) {
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -322,25 +375,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     LangKeys.allProjects.tr(),
                     style: context.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: context.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: Text(
-                      '$count',
-                      style: TextStyle(
-                        color: context.primary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 10,
-                      ),
                     ),
                   ),
                 ],
@@ -550,6 +584,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPendingApprovals(BuildContext context, ProjectState state) {
+    final authState = context.read<AuthBloc>().state;
+    final currentUserId = (authState is Authenticated) ? authState.user.id : '';
+
+    // Filter requests to only show those that require the current user's approval
+    final filteredRequests = state.pendingRequests
+        .where((r) => r.requiredApproverIds.contains(currentUserId))
+        .toList();
+
+    if (filteredRequests.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Text(
+            LangKeys.pendingApprovals.tr(),
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 290,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            itemCount: filteredRequests.length,
+            itemBuilder: (context, index) {
+              final request = filteredRequests[index];
+              return ApprovalRequestCard(request: request);
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
     );
   }
 }

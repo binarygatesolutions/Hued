@@ -70,13 +70,22 @@ class UserProfileSheet extends StatelessWidget {
                 LangKeys.emailAddress.tr(),
                 user.email,
               ),
-              const SizedBox(height: 16),
               _buildDetailRow(
                 context,
                 Ionicons.id_card_outline,
                 LangKeys.userId.tr(),
                 user.id,
               ),
+              if (user.role == UserRole.worker &&
+                  user.specialtyName != null) ...[
+                const SizedBox(height: 16),
+                _buildDetailRow(
+                  context,
+                  Ionicons.briefcase_outline,
+                  LangKeys.specialty.tr(),
+                  user.specialtyName!,
+                ),
+              ],
               const SizedBox(height: 48),
             ],
           ),
@@ -99,6 +108,9 @@ class UserProfileSheet extends StatelessWidget {
         break;
       case UserRole.client:
         color = context.mintGreen;
+        break;
+      case UserRole.worker:
+        color = context.secondary;
         break;
     }
 
