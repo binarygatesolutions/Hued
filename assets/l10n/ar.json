@@ -287,5 +287,16 @@
     "approvalRequestsStatus": "طلبات الموافقة والحالة",
     "taskDeadline": "موعد المهمة",
     "approved": "تمت الموافقة",
-    "rejected": "مرفوض"
+    "rejected": "مرفوض",
+    "errorOccurred": "حدث خطأ ما",
+    "generatingReport": "جاري إنشاء التقرير...",
+    "pleaseWait": "يرجى الانتظار قليلاً",
+    "reportExportedSuccessfully": "تم تصدير التقرير بنجاح",
+    "onTime": "في الموعد",
+    "leadingConsultancyFirm": "شركة استشاريه رائده في مجال الابتكار والتصميم",
+    "projectPerformanceReport": "تقرير أداء المشروع",
+    "projectHealthOrientation": "توجه سلامة المشروع",
+    "taskStatusDistribution": "توزيع حالة المهام",
+    "priorityIntensity": "كثافة الأولويات",
+    "confidentialProjectReport": "تقرير مشروع سري"
 }

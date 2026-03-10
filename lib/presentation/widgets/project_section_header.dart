@@ -39,7 +39,7 @@ class ProjectSectionHeader extends StatelessWidget {
           title,
           style: TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             color: context.onSurface,
           ),
         ),

@@ -322,7 +322,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   style: TextStyle(
                                     color: context.primary,
                                     fontSize: 9,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
@@ -444,7 +444,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Text(
                       LangKeys.hello.tr(args: [user.name.split(' ').first]),
                       style: context.textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: -1,
                         fontSize: 32,
                       ),
@@ -539,41 +539,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
           width: 160,
           child: PremiumCard(
             borderRadius: 32,
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: color.withOpacity(0.15)),
+            padding: const EdgeInsets.all(16), // Reduced padding
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: color.withOpacity(0.15)),
+                    ),
+                    child: Icon(icon, size: 20, color: color),
                   ),
-                  child: Icon(icon, size: 20, color: color),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: context.onSurface,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 26,
-                    letterSpacing: -0.5,
+                  const SizedBox(height: 12), // Reduced spacing
+                  Text(
+                    value,
+                    style: TextStyle(
+                      color: context.onSurface,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 26,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label.toUpperCase(),
-                  style: TextStyle(
-                    color: context.onSurface.withOpacity(0.4),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
+                  const SizedBox(height: 2), // Reduced spacing
+                  Text(
+                    label.toUpperCase(),
+                    style: TextStyle(
+                      color: context.onSurface.withOpacity(0.4),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         )

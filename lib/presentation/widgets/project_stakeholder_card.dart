@@ -8,6 +8,7 @@ import 'shared_profile_avatar.dart';
 import 'user_profile_sheet.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/localization/lang_keys.dart';
+import '../../core/utils/font_helper.dart';
 import 'package:go_router/go_router.dart';
 
 class ProjectStakeholderCard extends StatefulWidget {
@@ -320,10 +321,13 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                       children: [
                         Text(
                           pmName,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            color: context.onSurface,
+                          style: FontHelper.getTextStyle(
+                            pmName,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: context.onSurface,
+                            ),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -419,11 +423,14 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                                   Flexible(
                                     child: Text(
                                       wName,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: context.onSurface.withOpacity(
-                                          0.7,
+                                      style: FontHelper.getTextStyle(
+                                        wName,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: context.onSurface.withOpacity(
+                                            0.7,
+                                          ),
                                         ),
                                       ),
                                       maxLines: 1,
@@ -463,6 +470,7 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
               ),
             ),
           ],
+          SizedBox(height: 15),
         ],
       ),
     );
@@ -559,10 +567,13 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                         Flexible(
                           child: Text(
                             wName,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: context.onSurface.withOpacity(0.7),
+                            style: FontHelper.getTextStyle(
+                              wName,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: context.onSurface.withOpacity(0.7),
+                              ),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -661,10 +672,13 @@ class _ProjectStakeholderCardState extends State<ProjectStakeholderCard> {
                     const SizedBox(width: 10),
                     Text(
                       name,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: context.onSurface.withOpacity(0.8),
+                      style: FontHelper.getTextStyle(
+                        name,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: context.onSurface.withOpacity(0.8),
+                        ),
                       ),
                     ),
                   ],

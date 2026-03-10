@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/utils/activity_helper.dart';
 import '../../core/theme/theme_ext.dart';
+import '../../core/utils/font_helper.dart';
 import 'package:ionicons/ionicons.dart';
 import '../../domain/entities/entities.dart';
 import 'user_profile_sheet.dart';
@@ -41,7 +42,7 @@ class ActivityTimelineTile extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
+                  padding: const EdgeInsets.only(bottom: 28),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -51,9 +52,14 @@ class ActivityTimelineTile extends StatelessWidget {
                         activity.createdAt,
                         user,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 10),
                       if (isComment)
-                        _buildCommentCard(context, formatted.subtitle, color)
+                        _buildCommentCard(
+                          context,
+                          formatted.subtitle,
+                          color,
+                          user,
+                        )
                       else
                         _buildSystemContent(context, formatted.subtitle, color),
                     ],
@@ -65,7 +71,7 @@ class ActivityTimelineTile extends StatelessWidget {
         )
         .animate()
         .fadeIn(duration: 400.ms)
-        .slideX(begin: 0.1, curve: Curves.easeOutCubic);
+        .slideY(begin: 0.05, curve: Curves.easeOutCubic);
   }
 
   Widget _buildTimelineIndicator(
@@ -131,11 +137,13 @@ class ActivityTimelineTile extends StatelessWidget {
                 : null,
             child: Text(
               title,
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
-                color: context.onSurface,
-                decorationThickness: 1.5,
+              style: FontHelper.getTextStyle(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                  color: context.onSurface,
+                ),
               ),
             ),
           ),
@@ -152,30 +160,89 @@ class ActivityTimelineTile extends StatelessWidget {
     );
   }
 
-  Widget _buildCommentCard(BuildContext context, String content, Color color) {
+  Widget _buildCommentCard(
+    BuildContext context,
+    String content,
+    Color color,
+    UserEntity? user,
+  ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: context.onSurface.withOpacity(0.04),
+        color: context.surface,
         borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(20),
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
+          topRight: Radius.circular(24),
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: context.onSurface.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
         border: Border.all(
-          color: context.onSurface.withOpacity(0.03),
+          color: context.onSurface.withOpacity(0.05),
           width: 1,
         ),
       ),
-      child: Text(
-        content,
-        style: TextStyle(
-          fontSize: 14,
-          color: context.onSurface.withOpacity(0.8),
-          height: 1.5,
-          fontWeight: FontWeight.w400,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (user != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 12,
+                    backgroundColor: context.primary.withOpacity(0.1),
+                    backgroundImage: user.profile != null
+                        ? NetworkImage(user.profile!)
+                        : null,
+                    child: user.profile == null
+                        ? Text(
+                            user.name[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: context.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    user.name,
+                    style: FontHelper.getTextStyle(
+                      user.name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: context.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              content,
+              style: FontHelper.getTextStyle(
+                content,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: context.onSurface.withOpacity(0.85),
+                  height: 1.6,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -207,10 +274,13 @@ class ActivityTimelineTile extends StatelessWidget {
         ),
         child: Text(
           content,
-          style: TextStyle(
-            fontSize: 12,
-            color: context.onSurface.withOpacity(0.6),
-            fontWeight: FontWeight.w500,
+          style: FontHelper.getTextStyle(
+            content,
+            style: TextStyle(
+              fontSize: 12,
+              color: context.onSurface.withOpacity(0.6),
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
   static String getFontFamily(String languageCode) {
     if (languageCode == 'ar') {
-      return GoogleFonts.almarai().fontFamily ?? 'Almarai';
+      return 'Almarai';
     }
-    return GoogleFonts.plusJakartaSans().fontFamily ?? 'Plus Jakarta Sans';
+    return 'PlusJakartaSans';
   }
 
   static ThemeData getDarkTheme(String languageCode) {

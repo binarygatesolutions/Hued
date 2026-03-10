@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hued/core/utils/font_helper.dart';
 import 'package:hued/presentation/widgets/custom_loading.dart';
 import 'package:hued/presentation/widgets/shared_app_bar.dart';
 import 'package:go_router/go_router.dart';
@@ -412,11 +413,14 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
       children: [
         Text(
           widget.project.title,
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
-            color: context.onSurface,
-            height: 1.1,
+          style: FontHelper.getTextStyle(
+            widget.project.title,
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: context.onSurface,
+              height: 1.1,
+            ),
           ),
         ),
         const SizedBox(height: 8),

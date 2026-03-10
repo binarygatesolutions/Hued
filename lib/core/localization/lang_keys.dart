@@ -306,4 +306,15 @@ abstract class LangKeys {
   static const taskDeadline = 'taskDeadline';
   static const approved = 'approved';
   static const rejected = 'rejected';
+  static const errorOccurred = 'errorOccurred';
+  static const generatingReport = 'generatingReport';
+  static const pleaseWait = 'pleaseWait';
+  static const reportExportedSuccessfully = 'reportExportedSuccessfully';
+  static const onTime = 'onTime';
+  static const projectPerformanceReport = 'projectPerformanceReport';
+  static const projectHealthOrientation = 'projectHealthOrientation';
+  static const taskStatusDistribution = 'taskStatusDistribution';
+  static const priorityIntensity = 'priorityIntensity';
+  static const confidentialProjectReport = 'confidentialProjectReport';
+  static const leadingConsultancyFirm = 'leadingConsultancyFirm';
 }

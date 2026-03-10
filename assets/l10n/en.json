@@ -287,5 +287,16 @@
     "approvalRequestsStatus": "APPROVAL REQUESTS & STATUS",
     "taskDeadline": "Task Deadline",
     "approved": "Approved",
-    "rejected": "Rejected"
+    "rejected": "Rejected",
+    "errorOccurred": "An error occurred",
+    "generatingReport": "Generating Report...",
+    "pleaseWait": "Please wait a moment",
+    "reportExportedSuccessfully": "Report exported successfully",
+    "onTime": "On Time",
+    "leadingConsultancyFirm": "Leading consultancy firm in innovation and design",
+    "projectPerformanceReport": "Project Performance Report",
+    "projectHealthOrientation": "Project Health Orientation",
+    "taskStatusDistribution": "Task Status Distribution",
+    "priorityIntensity": "Priority Intensity",
+    "confidentialProjectReport": "Confidential Project Report"
 }

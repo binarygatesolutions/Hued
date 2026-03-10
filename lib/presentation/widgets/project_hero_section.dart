@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hued/core/utils/font_helper.dart';
 import '../../core/utils/animations.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/entities.dart';
@@ -73,10 +74,16 @@ class ProjectHeroSection extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     project.title,
-                    style: context.textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: context.onSurface,
-                      height: 1.1,
+                    style: FontHelper.getTextStyle(
+                      project.title,
+                      style: FontHelper.getTextStyle(
+                        project.title,
+                        style: context.textTheme.displaySmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: context.onSurface,
+                          height: 1.1,
+                        ),
+                      ),
                     ),
                   ).animateEntrance(),
                   const SizedBox(height: 12),
@@ -123,11 +130,14 @@ class ProjectHeroSection extends StatelessWidget {
         const SizedBox(height: 20),
         Text(
           project.description,
-          style: TextStyle(
-            color: context.onSurface.withOpacity(0.6),
-            fontSize: 15,
-            height: 1.6,
-            fontWeight: FontWeight.w500,
+          style: FontHelper.getTextStyle(
+            project.description,
+            style: TextStyle(
+              color: context.onSurface.withOpacity(0.6),
+              fontSize: 15,
+              height: 1.6,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ).animateEntrance(delayMs: 300),
       ],

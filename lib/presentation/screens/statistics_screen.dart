@@ -186,8 +186,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, LangKeys.coreMetrics.tr()),
-        const SizedBox(height: 16),
         GridView.count(
           crossAxisCount: isMobile ? 2 : 4,
           shrinkWrap: true,

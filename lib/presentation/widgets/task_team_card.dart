@@ -8,6 +8,7 @@ import 'shared_profile_avatar.dart';
 import 'user_profile_sheet.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/localization/lang_keys.dart';
+import '../../core/utils/font_helper.dart';
 
 class TaskTeamCard extends StatefulWidget {
   final TaskEntity task;
@@ -213,10 +214,13 @@ class _TaskTeamCardState extends State<TaskTeamCard> {
                               Flexible(
                                 child: Text(
                                   wName,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: context.onSurface.withOpacity(0.9),
+                                  style: FontHelper.getTextStyle(
+                                    wName,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: context.onSurface.withOpacity(0.9),
+                                    ),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -380,10 +384,13 @@ class _TaskTeamCardState extends State<TaskTeamCard> {
             children: [
               Text(
                 user.name,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: context.onSurface,
+                style: FontHelper.getTextStyle(
+                  user.name,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: context.onSurface,
+                  ),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

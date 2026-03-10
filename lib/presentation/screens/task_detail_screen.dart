@@ -14,6 +14,7 @@ import '../../core/utils/animations.dart';
 import '../../core/utils/haptics_service.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/entities.dart';
+import '../../core/utils/font_helper.dart';
 import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
 import '../blocs/project_bloc.dart';
@@ -255,6 +256,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       extendBodyBehindAppBar: true,
       appBar: SharedAppBar(
         title: task.title,
+        titleStyle: FontHelper.getTextStyle(
+          task.title,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
         actions: [const SizedBox(width: 8)],
       ),
       body: Stack(
@@ -489,10 +494,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           const SizedBox(height: 24),
           Text(
             task.title,
-            style: context.textTheme.headlineSmall?.copyWith(
-              color: context.onSurface,
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
+            style: FontHelper.getTextStyle(
+              task.title,
+              style: context.textTheme.headlineSmall?.copyWith(
+                color: context.onSurface,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -763,11 +771,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         const SizedBox(height: 16),
         Text(
           task.description,
-          style: TextStyle(
-            color: context.onSurface.withOpacity(0.9),
-            fontSize: 16,
-            height: 1.7,
-            fontWeight: FontWeight.w400,
+          style: FontHelper.getTextStyle(
+            task.description,
+            style: TextStyle(
+              color: context.onSurface.withOpacity(0.9),
+              fontSize: 16,
+              height: 1.7,
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
       ],

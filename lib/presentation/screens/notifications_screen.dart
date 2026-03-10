@@ -9,6 +9,7 @@ import 'package:easy_localization/easy_localization.dart';
 import '../../core/localization/lang_keys.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/notification_entity.dart';
+import '../../core/utils/font_helper.dart';
 import '../widgets/shared_app_bar.dart';
 import '../widgets/custom_loading.dart';
 
@@ -184,12 +185,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         Expanded(
                           child: Text(
                             notif.title,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: notif.isRead
-                                  ? FontWeight.w600
-                                  : FontWeight.w800,
-                              color: context.onSurface,
+                            style: FontHelper.getTextStyle(
+                              notif.title,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: notif.isRead
+                                    ? FontWeight.w600
+                                    : FontWeight.w800,
+                                color: context.onSurface,
+                              ),
                             ),
                           ),
                         ),
@@ -217,11 +221,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     const SizedBox(height: 5),
                     Text(
                       notif.body,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: context.onSurface.withValues(alpha: 0.65),
-                        height: 1.45,
+                      style: FontHelper.getTextStyle(
+                        notif.body,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: context.onSurface.withValues(alpha: 0.65),
+                          height: 1.45,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),

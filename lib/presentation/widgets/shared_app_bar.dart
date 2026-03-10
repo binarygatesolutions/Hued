@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hued/core/theme/theme_ext.dart';
+import 'package:hued/core/utils/font_helper.dart';
 import 'package:hued/core/utils/haptics_service.dart';
 
 class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -7,6 +8,7 @@ class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final Widget? leading;
   final bool showBackButton;
+  final TextStyle? titleStyle;
 
   const SharedAppBar({
     super.key,
@@ -14,6 +16,7 @@ class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.leading,
     this.showBackButton = true,
+    this.titleStyle,
   });
 
   @override
@@ -21,8 +24,11 @@ class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       title: Text(
         title,
-        style: context.textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w500,
+        style: FontHelper.getTextStyle(
+          title,
+          style: (titleStyle ?? context.textTheme.titleLarge)?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       leading:

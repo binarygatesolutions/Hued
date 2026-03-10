@@ -5,6 +5,7 @@ import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/entities.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/localization/lang_keys.dart';
+import '../../core/utils/font_helper.dart';
 import 'premium_card.dart';
 
 class TaskCard extends StatelessWidget {
@@ -120,10 +121,13 @@ class TaskCard extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     task.title,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16,
-                                      color: context.onSurface,
+                                    style: FontHelper.getTextStyle(
+                                      task.title,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                        color: context.onSurface,
+                                      ),
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -155,13 +159,16 @@ class TaskCard extends StatelessWidget {
                               task.description,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: context.onSurfaceVariant.withOpacity(
-                                  0.8,
+                              style: FontHelper.getTextStyle(
+                                task.description,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: context.onSurfaceVariant.withOpacity(
+                                    0.8,
+                                  ),
+                                  height: 1.3,
+                                  fontWeight: FontWeight.w400,
                                 ),
-                                height: 1.3,
-                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ],

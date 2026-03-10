@@ -6,6 +6,7 @@ import '../../domain/entities/entities.dart';
 import 'premium_card.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/localization/lang_keys.dart';
+import '../../core/utils/font_helper.dart';
 
 class ProjectCard extends StatelessWidget {
   final ProjectEntity project;
@@ -64,8 +65,11 @@ class ProjectCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               project.title,
-                              style: context.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
+                              style: FontHelper.getTextStyle(
+                                project.title,
+                                style: context.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
@@ -105,11 +109,14 @@ class ProjectCard extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(
                         project.description,
-                        style: TextStyle(
-                          color: context.onSurface.withOpacity(0.55),
-                          fontSize: 13,
-                          height: 1.5,
-                          fontWeight: FontWeight.w400,
+                        style: FontHelper.getTextStyle(
+                          project.description,
+                          style: TextStyle(
+                            color: context.onSurface.withOpacity(0.55),
+                            fontSize: 13,
+                            height: 1.5,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                       ),
                     ],

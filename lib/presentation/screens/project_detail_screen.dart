@@ -9,6 +9,7 @@ import '../../core/utils/animations.dart';
 import '../../core/utils/haptics_service.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/entities.dart';
+import '../../core/utils/font_helper.dart';
 import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
 import '../blocs/project_bloc.dart';
@@ -249,6 +250,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   ) {
     return SharedAppBar(
       title: currentProject.title,
+      titleStyle: FontHelper.getTextStyle(
+        currentProject.title,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
       actions: [
         if (currentProject.status == ProjectStatus.inProgress &&
             (user.role == UserRole.admin || user.role == UserRole.supervisor))
@@ -281,164 +286,23 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     List<TaskEntity> tasks,
     Map<String, UserEntity> users,
   ) async {
-    final Map<String, dynamic>?
-    result = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
-        ),
-        padding: const EdgeInsets.fromLTRB(28, 16, 28, 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 45,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.outlineVariant.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.primary,
-                        Theme.of(context).colorScheme.secondary,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome,
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        LangKeys.smartExport.tr(),
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w900),
-                      ),
-                      Text(
-                        LangKeys.generateInsights.tr(),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 40),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton.icon(
-                    onPressed: () => Navigator.pop(context, {
-                      'isDetailed': true,
-                      'shouldPrint': true,
-                    }),
-                    icon: const Icon(Icons.print_outlined),
-                    label: Text(LangKeys.print.tr()),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      foregroundColor: Theme.of(context).colorScheme.onSurface,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.outlineVariant,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: context.primary,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withOpacity(0.4),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton.icon(
-                      onPressed: () => Navigator.pop(context, {
-                        'isDetailed': true,
-                        'shouldPrint': false,
-                      }),
-                      icon: const Icon(Icons.rocket_launch_outlined),
-                      label: Text(LangKeys.extractPdf.tr()),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        elevation: 0,
-                        shadowColor: Colors.transparent,
-                        textStyle: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+    HapticsService.medium();
 
-    if (result == null) return;
+    final Map<String, dynamic>? result =
+        await showModalBottomSheet<Map<String, dynamic>>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => _buildExportOptionsSheet(context),
+        );
 
-    if (!mounted) return;
+    if (result == null || !mounted) return;
 
+    // Premium Loading Dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CustomLoading()),
+      builder: (context) => _buildPremiumLoadingDialog(context),
     );
 
     try {
@@ -454,9 +318,136 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         locale: context.locale,
         shouldPrint: result['shouldPrint'] ?? false,
       );
-    } finally {
-      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        _showExportSuccessFeedback(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(LangKeys.errorOccurred.tr()),
+            backgroundColor: context.error,
+          ),
+        );
+      }
     }
+  }
+
+  Widget _buildExportOptionsSheet(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(2.5),
+            ),
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: context.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Ionicons.document_text,
+              color: context.primary,
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            LangKeys.exportReport.tr(),
+            style: context.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            LangKeys.generateInsights.tr(),
+            textAlign: TextAlign.center,
+            style: context.textTheme.bodyMedium?.copyWith(
+              color: context.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: _ExportOptionButton(
+                  label: LangKeys.print.tr(),
+                  onPressed: () => Navigator.pop(context, {
+                    'isDetailed': true,
+                    'shouldPrint': true,
+                  }),
+                  isPrimary: false,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _ExportOptionButton(
+                  label: LangKeys.extractPdf.tr(),
+                  onPressed: () => Navigator.pop(context, {
+                    'isDetailed': true,
+                    'shouldPrint': false,
+                  }),
+                  isPrimary: true,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumLoadingDialog(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: CustomLoading(),
+    );
+  }
+
+  void _showExportSuccessFeedback(BuildContext context) {
+    HapticsService.heavy();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Ionicons.checkmark_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Text(LangKeys.reportExportedSuccessfully.tr()),
+          ],
+        ),
+        backgroundColor: context.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 
   Widget _buildScrollableContent(
@@ -664,6 +655,63 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ExportOptionButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+  final bool isPrimary;
+
+  const _ExportOptionButton({
+    required this.label,
+    required this.onPressed,
+    required this.isPrimary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: isPrimary
+          ? BoxDecoration(
+              color: context.primary,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: context.primary.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            )
+          : null,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        label: Text(
+          label,
+          style: FontHelper.getTextStyle(
+            label,
+            style: TextStyle(fontWeight: FontWeight.w400, fontSize: 14),
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isPrimary ? Colors.transparent : context.surface,
+          foregroundColor: isPrimary ? Colors.white : context.onSurface,
+          elevation: isPrimary ? 0 : 0,
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: isPrimary
+                ? BorderSide.none
+                : BorderSide(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outlineVariant.withOpacity(0.5),
+                  ),
+          ),
+        ),
       ),
     );
   }
