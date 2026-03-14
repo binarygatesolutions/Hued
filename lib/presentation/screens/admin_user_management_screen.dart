@@ -11,6 +11,7 @@ import '../../domain/entities/entities.dart';
 import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
 import '../widgets/custom_loading.dart';
+import '../../core/utils/animations.dart';
 import '../widgets/shared_profile_avatar.dart';
 import '../blocs/specialty_bloc.dart';
 import '../../core/navigation/app_router.dart';
@@ -213,7 +214,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is Authenticated) {
-          final isMobile = ResponsiveLayout.isMobile(context);
+          final isLarge = ResponsiveLayout.isLargeScreen(context);
           return Scaffold(
             backgroundColor: context.background,
             appBar: SharedAppBar(
@@ -230,7 +231,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 24 : 40,
+                      horizontal: !isLarge ? 24 : 40,
                       vertical: 20,
                     ),
                     child: Column(
@@ -245,7 +246,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                   ),
                 ),
               ],
-            ),
+            ).animateEntrance(),
           );
         }
         return const Scaffold(body: CustomLoading());

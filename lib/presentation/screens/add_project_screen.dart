@@ -58,7 +58,7 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = ResponsiveLayout.isMobile(context);
+    final isLarge = ResponsiveLayout.isLargeScreen(context);
 
     return Scaffold(
       backgroundColor: context.background,
@@ -83,69 +83,87 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 24 : 40,
+            horizontal: !isLarge ? 24 : 40,
             vertical: 32,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GlassContainer(
-                borderRadius: 24,
-                padding: const EdgeInsets.all(28),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        LangKeys.projectDetails.tr(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2,
-                          color: context.onSurface.withOpacity(0.4),
+          child: Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GlassContainer(
+                    borderRadius: 24,
+                    padding: const EdgeInsets.all(28),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            LangKeys.projectDetails.tr(),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
+                              color: context.onSurface.withOpacity(0.4),
+                            ),
+                          ).animate().fadeIn().slideY(begin: 0.1),
+                          const SizedBox(height: 24),
+                          SharedTextField(
+                                controller: _titleController,
+                                label: LangKeys.projectTitle.tr(),
+                                icon: Ionicons.folder_outline,
+                                validator: (value) =>
+                                    value == null || value.trim().isEmpty
+                                    ? LangKeys.pleaseEnterTitle.tr()
+                                    : null,
+                              )
+                              .animate()
+                              .fadeIn(delay: 100.ms)
+                              .slideX(begin: -0.05),
+                          const SizedBox(height: 20),
+                          SharedTextField(
+                                controller: _descriptionController,
+                                label: LangKeys.description.tr(),
+                                icon: Ionicons.document_text_outline,
+                                maxLines: 4,
+                                validator: (value) =>
+                                    value == null || value.trim().isEmpty
+                                    ? LangKeys.pleaseEnterDescription.tr()
+                                    : null,
+                              )
+                              .animate()
+                              .fadeIn(delay: 200.ms)
+                              .slideX(begin: -0.05),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+                  SharedButton(
+                        onPressed: _submit,
+                        text: LangKeys.createProject.tr(),
+                        isLoading: _isCreating,
+                        height: 52,
+                        textStyle: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                          letterSpacing: 1.2,
                         ),
-                      ).animate().fadeIn().slideY(begin: 0.1),
-                      const SizedBox(height: 24),
-                      SharedTextField(
-                        controller: _titleController,
-                        label: LangKeys.projectTitle.tr(),
-                        icon: Ionicons.folder_outline,
-                        validator: (value) =>
-                            value == null || value.trim().isEmpty
-                            ? LangKeys.pleaseEnterTitle.tr()
-                            : null,
-                      ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.05),
-                      const SizedBox(height: 20),
-                      SharedTextField(
-                        controller: _descriptionController,
-                        label: LangKeys.description.tr(),
-                        icon: Ionicons.document_text_outline,
-                        maxLines: 4,
-                        validator: (value) =>
-                            value == null || value.trim().isEmpty
-                            ? LangKeys.pleaseEnterDescription.tr()
-                            : null,
-                      ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.05),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
+                      )
+                      .animate()
+                      .fadeIn(delay: 400.ms)
+                      .scale(
+                        curve: Curves.easeOutBack,
+                        begin: const Offset(0.9, 0.9),
+                      ),
+                  const SizedBox(height: 100), // Bottom padding for scroll
+                ],
               ),
-              const SizedBox(height: 48),
-              SharedButton(
-                    onPressed: _submit,
-                    text: LangKeys.createProject.tr(),
-                    isLoading: _isCreating,
-                  )
-                  .animate()
-                  .fadeIn(delay: 400.ms)
-                  .scale(
-                    curve: Curves.easeOutBack,
-                    begin: const Offset(0.9, 0.9),
-                  ),
-              const SizedBox(height: 100), // Bottom padding for scroll
-            ],
+            ),
           ),
         ),
       ),

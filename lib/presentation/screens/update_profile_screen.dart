@@ -89,62 +89,70 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
 
           // Main Content
           Positioned.fill(
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 20,
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          _buildAvatarSection(),
-                          const SizedBox(height: 40),
-                          GlassContainer(
-                            padding: const EdgeInsets.all(24),
-                            opacity: 0.6,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildPremiumTextField(
-                                  context,
-                                  controller: _nameController,
-                                  hint: LangKeys.enterYourName.tr(),
-                                  label: LangKeys.fullName.tr(),
-                                  icon: Ionicons.person_outline,
-                                  validator: (v) => v?.isEmpty ?? true
-                                      ? LangKeys.nameRequired.tr()
-                                      : null,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final horizontalPadding = width > 800 ? (width - 600) / 2 : 24.0;
+                
+                return CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: 40,
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              _buildAvatarSection(),
+                              const SizedBox(height: 48),
+                              GlassContainer(
+                                padding: const EdgeInsets.all(32),
+                                opacity: 0.6,
+                                borderRadius: 32,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildPremiumTextField(
+                                      context,
+                                      controller: _nameController,
+                                      hint: LangKeys.enterYourName.tr(),
+                                      label: LangKeys.fullName.tr(),
+                                      icon: Ionicons.person_outline,
+                                      validator: (v) => v?.isEmpty ?? true
+                                          ? LangKeys.nameRequired.tr()
+                                          : null,
+                                    ),
+                                    const SizedBox(height: 24),
+                                    _buildPremiumTextField(
+                                      context,
+                                      controller: _emailController,
+                                      hint: LangKeys.enterYourEmail.tr(),
+                                      label: LangKeys.emailAddress.tr(),
+                                      readOnly: true,
+                                      icon: Ionicons.mail_outline,
+                                      keyboardType: TextInputType.emailAddress,
+                                      validator: (v) => v?.isEmpty ?? true
+                                          ? LangKeys.emailRequired.tr()
+                                          : null,
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 20),
-                                _buildPremiumTextField(
-                                  context,
-                                  controller: _emailController,
-                                  hint: LangKeys.enterYourEmail.tr(),
-                                  label: LangKeys.emailAddress.tr(),
-                                  readOnly: true,
-                                  icon: Ionicons.mail_outline,
-                                  keyboardType: TextInputType.emailAddress,
-                                  validator: (v) => v?.isEmpty ?? true
-                                      ? LangKeys.emailRequired.tr()
-                                      : null,
-                                ),
-                              ],
-                            ),
-                          ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.05),
-                          const SizedBox(height: 40),
-                          _buildSaveButton(context),
-                          const SizedBox(height: 60),
-                        ],
+                              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.05),
+                              const SizedBox(height: 48),
+                              _buildSaveButton(context),
+                              const SizedBox(height: 80),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ),
         ],

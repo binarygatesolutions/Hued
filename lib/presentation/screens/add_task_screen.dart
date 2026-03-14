@@ -10,6 +10,7 @@ import '../../core/localization/lang_keys.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:ui';
 import '../../core/theme/theme_ext.dart';
+import '../../core/utils/responsive_layout.dart';
 import '../../domain/entities/entities.dart';
 import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
@@ -19,6 +20,7 @@ import '../blocs/project_event.dart';
 import '../widgets/shared_text_field.dart';
 import '../widgets/email_search_picker.dart';
 import '../widgets/shared_button.dart';
+import '../widgets/glass_container.dart';
 import 'package:hued/core/utils/animations.dart';
 
 class AddTaskScreen extends StatefulWidget {
@@ -147,7 +149,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
@@ -176,116 +177,107 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           children: [
             _buildBackground(context),
             SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 32,
-                vertical: 130,
+              padding: EdgeInsets.symmetric(
+                horizontal: !ResponsiveLayout.isLargeScreen(context) ? 24 : 40,
+                vertical: !ResponsiveLayout.isLargeScreen(context) ? 130 : 150,
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    child: Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: context.surface,
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(
-                          color: context.onSurface.withOpacity(0.05),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
-                            blurRadius: 40,
-                            offset: const Offset(0, 20),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: Column(
+                        children: [
+                          GlassContainer(
+                            borderRadius: 32,
+                            padding: const EdgeInsets.all(32),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    LangKeys.taskDetails.tr(),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.2,
+                                      color: context.onSurface.withOpacity(0.4),
+                                    ),
+                                  ).animateEntrance(delayMs: 400),
+                                  const SizedBox(height: 24),
+                                  SharedTextField(
+                                    controller: _titleController,
+                                    label: LangKeys.taskTitle.tr(),
+                                    icon: Ionicons.checkbox_outline,
+                                    validator: (v) => v?.isEmpty ?? true
+                                        ? LangKeys.required.tr()
+                                        : null,
+                                  ).animateEntrance(delayMs: 500),
+                                  const SizedBox(height: 20),
+                                  SharedTextField(
+                                    controller: _descriptionController,
+                                    label: LangKeys.description.tr(),
+                                    icon: Ionicons.document_text_outline,
+                                    maxLines: 3,
+                                    validator: (v) => v?.isEmpty ?? true
+                                        ? LangKeys.required.tr()
+                                        : null,
+                                  ).animateEntrance(delayMs: 600),
+                                  const SizedBox(height: 32),
+                                  Text(
+                                    LangKeys.timelineAndUrgency.tr(),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.2,
+                                      color: context.onSurface.withOpacity(0.4),
+                                    ),
+                                  ).animateEntrance(delayMs: 700),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildPrioritySelector()
+                                            .animateEntrance(delayMs: 800),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: _buildDeadlinePicker().animateEntrance(
+                                          delayMs: 800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (!isClient) ...[
+                                    const SizedBox(height: 32),
+                                    Text(
+                                      LangKeys.assignWorkersUpper.tr(),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.2,
+                                        color: context.onSurface.withOpacity(0.4),
+                                      ),
+                                    ).animateEntrance(delayMs: 900),
+                                    const SizedBox(height: 16),
+                                    _buildWorkerPicker(
+                                      context,
+                                    ).animateEntrance(delayMs: 950),
+                                  ],
+                                ],
+                              ),
+                            ),
                           ),
+                          const SizedBox(height: 48),
+                          _buildSubmitButton(context).animateEntrance(delayMs: 1000),
                         ],
                       ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              LangKeys.taskDetails.tr(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.2,
-                                color: context.onSurface.withOpacity(0.4),
-                              ),
-                            ).animateEntrance(delayMs: 400),
-                            const SizedBox(height: 24),
-                            SharedTextField(
-                              controller: _titleController,
-                              label: LangKeys.taskTitle.tr(),
-                              icon: Ionicons.checkbox_outline,
-                              validator: (v) => v?.isEmpty ?? true
-                                  ? LangKeys.required.tr()
-                                  : null,
-                            ).animateEntrance(delayMs: 500),
-                            const SizedBox(height: 20),
-                            SharedTextField(
-                              controller: _descriptionController,
-                              label: LangKeys.description.tr(),
-                              icon: Ionicons.document_text_outline,
-                              maxLines: 3,
-                              validator: (v) => v?.isEmpty ?? true
-                                  ? LangKeys.required.tr()
-                                  : null,
-                            ).animateEntrance(delayMs: 600),
-                            const SizedBox(height: 32),
-                            Text(
-                              LangKeys.timelineAndUrgency.tr(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.2,
-                                color: context.onSurface.withOpacity(0.4),
-                              ),
-                            ).animateEntrance(delayMs: 700),
-                            const SizedBox(height: 20),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildPrioritySelector()
-                                      .animateEntrance(delayMs: 800),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildDeadlinePicker().animateEntrance(
-                                    delayMs: 800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            // Worker assignment section — hidden for clients
-                            if (!isClient) ...[
-                              const SizedBox(height: 32),
-                              Text(
-                                LangKeys.assignWorkersUpper.tr(),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.2,
-                                  color: context.onSurface.withOpacity(0.4),
-                                ),
-                              ).animateEntrance(delayMs: 900),
-                              const SizedBox(height: 16),
-                              _buildWorkerPicker(
-                                context,
-                              ).animateEntrance(delayMs: 950),
-                            ],
-                          ],
-                        ),
-                      ),
                     ),
-                  ).animateScale(delayMs: 400),
-                  const SizedBox(height: 48),
-                  _buildSubmitButton(context).animateEntrance(delayMs: 1000),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -396,11 +388,12 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       onPressed: _submitForm,
       text: LangKeys.createTask.tr(),
       showShadow: true,
+      height: 52,
       disabled: _selectedWorkerIds.isEmpty,
       textStyle: const TextStyle(
         color: Colors.white,
         fontWeight: FontWeight.w900,
-        fontSize: 16,
+        fontSize: 15,
         letterSpacing: 1.2,
       ),
     );

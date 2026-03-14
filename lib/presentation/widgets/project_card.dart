@@ -37,9 +37,8 @@ class ProjectCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 4,
@@ -107,25 +106,24 @@ class ProjectCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        project.description,
-                        style: FontHelper.getTextStyle(
+                        Text(
                           project.description,
-                          style: TextStyle(
-                            color: context.onSurface.withOpacity(0.55),
-                            fontSize: 13,
-                            height: 1.5,
-                            fontWeight: FontWeight.w400,
+                          style: FontHelper.getTextStyle(
+                            project.description,
+                            style: TextStyle(
+                              color: context.onSurface.withOpacity(0.55),
+                              fontSize: 13,
+                              height: 1.5,
+                              fontWeight: FontWeight.w400,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 20),
           Row(
             children: [
               FutureBuilder<AggregateQuerySnapshot>(

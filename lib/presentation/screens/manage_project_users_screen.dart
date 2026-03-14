@@ -21,6 +21,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/localization/lang_keys.dart';
 import '../../core/theme/theme_ext.dart';
+import '../../core/utils/responsive_layout.dart';
 
 class ManageProjectUsersScreen extends StatefulWidget {
   final ProjectEntity project;
@@ -299,7 +300,114 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
 
   Widget _buildManagementContent(BuildContext context, UserEntity user) {
     final isPm = user.role == UserRole.projectManager;
+    final isLarge = ResponsiveLayout.isLargeScreen(context);
 
+    if (isLarge) {
+      return Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left Side: Project Info & Stats
+              Expanded(
+                flex: 2,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeroHeader(context).animateEntrance(),
+                      const SizedBox(height: 48),
+                      if (!isPm) 
+                        _buildFixedSupervisorCard(context).animateEntrance(delayMs: 300),
+                    ],
+                  ),
+                ),
+              ),
+              // Right Side: Pickers
+              Expanded(
+                flex: 3,
+                child: Stack(
+                  children: [
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(40, 40, 40, 120),
+                      child: Column(
+                        children: [
+                          if (!isPm) ...[
+                            _buildSectionHeader(
+                              LangKeys.managementAndOversight.tr(),
+                              Ionicons.shield_checkmark_outline,
+                            ).animateEntrance(delayMs: 200),
+                            const SizedBox(height: 24),
+                            _buildPickerWithLabel(
+                              label: LangKeys.projectManagers.tr(),
+                              ids: _managerIds,
+                              role: UserRole.projectManager,
+                              onChanged: (ids) => setState(() {
+                                _managerIds = ids;
+                                _hasChanges = true;
+                              }),
+                            ).animateEntrance(delayMs: 400),
+                            const SizedBox(height: 48),
+                            _buildSectionHeader(
+                              LangKeys.stakeholders.tr(),
+                              Ionicons.people_outline,
+                            ).animateEntrance(delayMs: 500),
+                            const SizedBox(height: 24),
+                            _buildPickerWithLabel(
+                              label: LangKeys.clientsExternal.tr(),
+                              ids: _clientIds,
+                              role: UserRole.client,
+                              onChanged: (ids) => setState(() {
+                                _clientIds = ids;
+                                _hasChanges = true;
+                              }),
+                            ).animateEntrance(delayMs: 600),
+                          ] else ...[
+                            _buildSectionHeader(
+                              LangKeys.workers.tr(),
+                              Ionicons.construct_outline,
+                            ).animateEntrance(delayMs: 700),
+                            const SizedBox(height: 24),
+                            _buildPickerWithLabel(
+                              label: LangKeys.workers.tr(),
+                              ids: _workerIds.where((id) => _workerManagerMap[id] == user.id).toList(),
+                              role: UserRole.worker,
+                              onChanged: (ids) => setState(() {
+                                final oldMyWorkers = _workerIds.where((id) => _workerManagerMap[id] == user.id).toList();
+                                for (var id in oldMyWorkers) {
+                                  _workerIds.remove(id);
+                                  _workerManagerMap.remove(id);
+                                }
+                                for (var id in ids) {
+                                  if (!_workerIds.contains(id)) _workerIds.add(id);
+                                  _workerManagerMap[id] = user.id;
+                                }
+                                _hasChanges = true;
+                              }),
+                            ).animateEntrance(delayMs: 800),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (_hasChanges)
+                      Positioned(
+                        bottom: 40,
+                        left: 40,
+                        right: 40,
+                        child: _buildSaveButton(context, user),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Mobile remains the same but wrapped for clarity
     return Stack(
       children: [
         CustomScrollView(
@@ -556,6 +664,13 @@ class _ManageProjectUsersScreenState extends State<ManageProjectUsersScreen> {
     return SharedButton(
       onPressed: () => _saveChanges(user),
       text: LangKeys.updateTeam.tr(),
+      height: 52,
+      textStyle: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w900,
+        fontSize: 15,
+        letterSpacing: 1.2,
+      ),
     );
   }
 

@@ -1,3 +1,5 @@
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -116,53 +118,67 @@ class _ArchivedProjectsScreenState extends State<ArchivedProjectsScreen> {
               );
             }
 
-            return SharedSmartRefresher(
-              controller: _refreshController,
-              onRefresh: () async => _loadArchived(),
-              onLoading: _onLoading,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(20),
-                itemCount: state.projects.length,
-                itemBuilder: (context, index) {
-                  final project = state.projects[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: ProjectCard(
-                      project: project,
-                      onTap: () => context.pushNamed(
-                        AppRouter.projectDetails,
-                        pathParameters: {'id': project.id},
-                        extra: project,
-                      ),
-                      trailing: TextButton.icon(
-                        onPressed: () {
-                          context.read<ArchiveBloc>().add(
-                            UnarchiveProject(projectId: project.id),
-                          );
-                        },
-                        icon: const Icon(Ionicons.refresh_outline, size: 16),
-                        label: Text(
-                          LangKeys.unarchive.tr(),
-                          style: const TextStyle(fontSize: 12),
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final crossAxisCount = width > 1000 ? 3 : (width > 600 ? 2 : 1);
+                final horizontalPadding = width > 1200 ? (width - 1000) / 2 : 24.0;
+
+                return SharedSmartRefresher(
+                  controller: _refreshController,
+                  onRefresh: () async => _loadArchived(),
+                  onLoading: _onLoading,
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverPadding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: 24,
                         ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: context.primary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(100),
-                            side: BorderSide(
-                              color: context.primary.withOpacity(0.2),
-                            ),
-                          ),
+                        sliver: SliverMasonryGrid.count(
+                          crossAxisCount: crossAxisCount,
+                          mainAxisSpacing: 24,
+                          crossAxisSpacing: 24,
+                          itemBuilder: (context, index) {
+                            if (index >= state.projects.length) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(20),
+                                  child: CustomLoading(size: 20),
+                                ),
+                              );
+                            }
+
+                            final project = state.projects[index];
+                            return ProjectCard(
+                              project: project,
+                              onTap: () => context.pushNamed(
+                                AppRouter.projectDetails,
+                                pathParameters: {'id': project.id},
+                                extra: project,
+                              ),
+                              trailing: IconButton(
+                                onPressed: () {
+                                  context.read<ArchiveBloc>().add(
+                                        UnarchiveProject(projectId: project.id),
+                                      );
+                                },
+                                icon: const Icon(Ionicons.refresh_outline, size: 20),
+                                tooltip: LangKeys.unarchive.tr(),
+                                style: IconButton.styleFrom(
+                                  foregroundColor: context.primary,
+                                  backgroundColor: context.primary.withOpacity(0.1),
+                                ),
+                              ),
+                            ).animate().fadeIn(delay: (100 * (index % 6)).ms);
+                          },
+                          childCount: state.projects.length + (state.hasMore ? 1 : 0),
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    ],
+                  ),
+                );
+              },
             );
           },
         ),

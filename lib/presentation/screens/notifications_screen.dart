@@ -10,6 +10,7 @@ import '../../core/localization/lang_keys.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../../core/utils/font_helper.dart';
+import '../../core/utils/animations.dart';
 import '../widgets/shared_app_bar.dart';
 import '../widgets/custom_loading.dart';
 
@@ -118,21 +119,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         title: LangKeys.notifications.tr(),
         showBackButton: true,
       ),
-      body: FirestorePagination(
-        query: _query,
-        limit: 20,
-        viewType: ViewType.list,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        onEmpty: _buildEmptyState(),
-        itemBuilder: (context, docs, index) {
-          final snap = docs[index] as DocumentSnapshot<Map<String, dynamic>>;
-          final notif = NotificationEntity.fromFirestore(
-            snap.data() ?? {},
-            snap.id,
-          );
-          return _buildItem(notif, index);
-        },
-      ),
+      body: Container(
+        child: FirestorePagination(
+          query: _query,
+          limit: 20,
+          viewType: ViewType.list,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          onEmpty: _buildEmptyState(),
+          itemBuilder: (context, docs, index) {
+            final snap = docs[index] as DocumentSnapshot<Map<String, dynamic>>;
+            final notif = NotificationEntity.fromFirestore(
+              snap.data() ?? {},
+              snap.id,
+            );
+            return _buildItem(notif, index).animateListStep(index: index);
+          },
+        ),
+      ).animateEntrance(),
     );
   }
 

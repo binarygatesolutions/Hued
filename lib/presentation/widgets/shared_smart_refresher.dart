@@ -26,7 +26,7 @@ class SharedSmartRefresher extends StatelessWidget {
       controller: controller,
       enablePullUp: enablePullUp,
       onRefresh: onRefresh,
-      onLoading: onLoading,
+      onLoading: onLoading ?? () async {},
       header: ClassicHeader(
         refreshingIcon: const SizedBox(
           width: 20,

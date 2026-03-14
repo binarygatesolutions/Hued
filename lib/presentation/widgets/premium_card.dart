@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/theme_ext.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/utils/haptics_service.dart';
 
 class PremiumCard extends StatelessWidget {
@@ -62,7 +63,12 @@ class PremiumCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ).animate(target: onTap != null ? 1 : 0).scale(
+          begin: const Offset(1, 1),
+          end: const Offset(0.98, 0.98),
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeInOut,
+        );
 
     if (margin != null) {
       return Padding(padding: margin!, child: cardContent);

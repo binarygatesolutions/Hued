@@ -7,6 +7,8 @@ import 'core/navigation/app_router.dart';
 import 'core/localization/lang_keys.dart';
 import 'core/services/notification_service.dart';
 import 'core/utils/injection_container.dart';
+import 'package:window_manager/window_manager.dart';
+import 'dart:io';
 import 'presentation/blocs/auth_bloc.dart';
 import 'presentation/blocs/auth_event.dart';
 import 'presentation/blocs/project_bloc.dart';
@@ -21,6 +23,23 @@ void main() async {
   await EasyLocalization.ensureInitialized();
   await initDependencies();
   await sl<NotificationService>().init();
+
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    await windowManager.ensureInitialized();
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(1280, 800),
+      minimumSize: Size(1000, 600),
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+    );
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
   runApp(
     EasyLocalization(
       supportedLocales: const [Locale('en'), Locale('ar')],

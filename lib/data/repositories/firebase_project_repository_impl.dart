@@ -76,7 +76,10 @@ class FirebaseProjectRepositoryImpl implements ProjectRepository {
   }) async {
     Query query = _projectsCollection.orderBy('createdAt', descending: true);
 
-    if (role != null && role != UserRole.admin && userId != null) {
+    if (role != null &&
+        role != UserRole.admin &&
+        role != UserRole.supervisor &&
+        userId != null) {
       query = query.where('assignedUserIds', arrayContains: userId);
     }
 

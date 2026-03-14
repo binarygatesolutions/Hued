@@ -3,9 +3,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:hued/domain/entities/entities.dart';
 import 'package:hued/presentation/blocs/project_event.dart';
+import 'package:hued/presentation/widgets/custom_loading.dart';
+import 'package:hued/presentation/widgets/project_card.dart';
+import 'package:hued/presentation/widgets/shared_app_logo.dart';
+import 'package:hued/presentation/widgets/shared_profile_avatar.dart';
 import '../../core/localization/lang_keys.dart';
 import 'package:hued/core/navigation/app_router.dart';
 import 'package:ionicons/ionicons.dart';
@@ -13,11 +19,6 @@ import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
 import '../blocs/project_bloc.dart';
 import '../blocs/project_state.dart';
-import '../widgets/project_card.dart';
-import '../widgets/custom_loading.dart';
-import '../widgets/shared_profile_avatar.dart';
-import '../widgets/shared_app_logo.dart';
-import '../../domain/entities/entities.dart';
 import '../../core/theme/theme_ext.dart';
 import '../widgets/premium_card.dart';
 import '../widgets/approval_request_card.dart';
@@ -26,6 +27,8 @@ import 'package:pull_to_refresh_flutter3/pull_to_refresh_flutter3.dart';
 import 'package:hued/core/utils/animations.dart';
 import 'package:hued/core/utils/haptics_service.dart';
 import '../widgets/project_section_header.dart';
+import '../../core/utils/responsive_layout.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 int _activeProjects = 0;
 int _finishedProjects = 0;
@@ -89,11 +92,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> getStatistics(UserEntity user) async {
     final col = FirebaseFirestore.instance.collection('projects');
 
-    // For non-admins, scope queries to projects they are assigned to.
-    final bool isAdmin = user.role == UserRole.admin;
-
     Query<Map<String, dynamic>> base = col;
-    if (!isAdmin) {
+    if (user.role != UserRole.admin && user.role != UserRole.supervisor) {
       base = col.where('assignedUserIds', arrayContains: user.id);
     }
 
@@ -305,15 +305,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               const SizedBox(width: 7),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
+                                  horizontal: 10,
+                                  vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
                                   color: context.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: context.primary.withOpacity(0.2),
-                                  ),
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
                                   LangKeys.getLocalizedRole(
@@ -322,13 +319,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   style: TextStyle(
                                     color: context.primary,
                                     fontSize: 9,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          _buildNotificationIcon(context, user),
+                          _buildNotificationButton(context),
                         ],
                       ),
                     ),
@@ -348,7 +345,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   SliverToBoxAdapter(child: _buildProjectHeader(context)),
-                  SliverToBoxAdapter(child: _buildProjectGrid(context, user)),
+                  BlocBuilder<ProjectBloc, ProjectState>(
+                    builder: (context, state) =>
+                        _buildProjectGrid(context, user, state),
+                  ),
                   const SliverToBoxAdapter(child: SizedBox(height: 100)),
                 ],
               ),
@@ -359,58 +359,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildProjectGrid(BuildContext context, UserEntity user) {
-    return BlocBuilder<ProjectBloc, ProjectState>(
-      builder: (context, state) {
-        if (state.isInitialLoading && state.projects.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 48),
-            child: CustomLoading(),
-          );
-        }
+  Widget _buildProjectGrid(
+    BuildContext context,
+    UserEntity user,
+    ProjectState state,
+  ) {
+    final isLarge = ResponsiveLayout.isLargeScreen(context);
 
-        if (!state.isInitialLoading && state.projects.isEmpty) {
-          return _buildEmptyState(context);
-        }
+    int crossAxisCount = 1;
+    if (isLarge) {
+      final width = MediaQuery.of(context).size.width;
+      if (width > 2000) {
+        crossAxisCount = 4;
+      } else if (width > 1500) {
+        crossAxisCount = 3;
+      } else {
+        crossAxisCount = 2;
+      }
+    }
 
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          itemCount: state.projects.length + (state.hasMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index >= state.projects.length) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              );
-            }
+    if (state.isInitialLoading && state.projects.isEmpty) {
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 48),
+          child: CustomLoading(),
+        ),
+      );
+    }
 
-            final project = state.projects[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child:
-                  ProjectCard(
-                        project: project,
-                        onTap: () => context.pushNamed(
-                          AppRouter.projectDetails,
-                          extra: project,
-                          pathParameters: {'id': project.id},
-                        ),
-                      )
-                      .animate()
-                      .fadeIn(delay: (500 + (index % 10 * 50)).ms)
-                      .slideY(begin: 0.1, curve: Curves.easeOutCubic),
+    if (!state.isInitialLoading && state.projects.isEmpty) {
+      return SliverToBoxAdapter(child: _buildEmptyState(context));
+    }
+
+    // Mobile/Tablet/Desktop View: True Masonry Layout
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      sliver: SliverMasonryGrid.count(
+        crossAxisCount: crossAxisCount,
+        mainAxisSpacing: 24,
+        crossAxisSpacing: 24,
+        itemBuilder: (context, index) {
+          if (index >= state.projects.length) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: CustomLoading(size: 20),
+              ),
             );
-          },
-        );
-      },
+          }
+
+          final project = state.projects[index];
+          return ProjectCard(
+            project: project,
+            onTap: () => context.pushNamed(
+              AppRouter.projectDetails,
+              extra: project,
+              pathParameters: {'id': project.id},
+            ),
+          ).animateListStep(index: index);
+        },
+        childCount: state.projects.length + (state.hasMore ? 1 : 0),
+      ),
     );
   }
 
@@ -488,41 +497,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQuickStats(BuildContext context, ProjectState state) {
+    final isLargeScreen = ResponsiveLayout.isLargeScreen(context);
+    final stats = [
+      (
+        Ionicons.rocket_outline,
+        LangKeys.activeProjects.tr(),
+        '$_activeProjects',
+        context.primary,
+        200,
+      ),
+      (
+        Ionicons.checkmark_done_outline,
+        LangKeys.finishedProjects.tr(),
+        '$_finishedProjects',
+        context.mintGreen,
+        300,
+      ),
+      (
+        Ionicons.close_circle_outline,
+        LangKeys.canceledProjects.tr(),
+        '$_canceledProjects',
+        context.error.withOpacity(0.75),
+        400,
+      ),
+    ];
+
+    if (isLargeScreen) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: Row(
+          children: stats
+              .map(
+                (s) => _buildStatTile(
+                  context,
+                  icon: s.$1,
+                  label: s.$2,
+                  value: s.$3,
+                  color: s.$4,
+                  delayMs: s.$5,
+                ),
+              )
+              .toList(),
+        ),
+      );
+    }
+
     return Container(
       height: 170,
       margin: const EdgeInsets.only(bottom: 32),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        children: [
-          _buildStatTile(
-            context,
-            icon: Ionicons.rocket_outline,
-            label: LangKeys.activeProjects.tr(),
-            value: '$_activeProjects',
-            color: context.primary,
-            delayMs: 200,
-          ),
-          const SizedBox(width: 16),
-          _buildStatTile(
-            context,
-            icon: Ionicons.checkmark_done_outline,
-            label: LangKeys.finishedProjects.tr(),
-            value: '$_finishedProjects',
-            color: context.mintGreen,
-            delayMs: 300,
-          ),
-          const SizedBox(width: 16),
-          _buildStatTile(
-            context,
-            icon: Ionicons.close_circle_outline,
-            label: LangKeys.canceledProjects.tr(),
-            value: '$_canceledProjects',
-            color: context.error.withOpacity(0.75),
-            delayMs: 400,
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: Row(
+          children: stats
+              .map(
+                (s) => _buildStatTile(
+                  context,
+                  icon: s.$1,
+                  label: s.$2,
+                  value: s.$3,
+                  color: s.$4,
+                  delayMs: s.$5,
+                ),
+              )
+              .toList(),
+        ),
       ),
     );
   }
@@ -535,105 +573,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color color,
     int delayMs = 0,
   }) {
-    return SizedBox(
-          width: 160,
+    return Expanded(
           child: PremiumCard(
             borderRadius: 32,
+            margin: EdgeInsets.symmetric(horizontal: 6),
             padding: const EdgeInsets.all(16), // Reduced padding
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: color.withOpacity(0.15)),
-                    ),
-                    child: Icon(icon, size: 20, color: color),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: color.withOpacity(0.15)),
                   ),
-                  const SizedBox(height: 12), // Reduced spacing
-                  Text(
-                    value,
-                    style: TextStyle(
-                      color: context.onSurface,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 26,
-                      letterSpacing: -0.5,
-                    ),
+                  child: Icon(icon, size: 20, color: color),
+                ),
+                const SizedBox(height: 12), // Reduced spacing
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: context.onSurface,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 26,
+                    letterSpacing: -0.5,
                   ),
-                  const SizedBox(height: 2), // Reduced spacing
-                  Text(
-                    label.toUpperCase(),
-                    style: TextStyle(
-                      color: context.onSurface.withOpacity(0.4),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
+                ),
+                const SizedBox(height: 2), // Reduced spacing
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    color: context.onSurface.withOpacity(0.4),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         )
         .animate()
         .fadeIn(delay: delayMs.ms)
         .scale(begin: const Offset(0.9, 0.9), curve: Curves.easeOutBack);
-  }
-
-  Widget _buildNotificationIcon(BuildContext context, UserEntity user) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.id)
-          .collection('notifications')
-          .where('isRead', isEqualTo: false)
-          .snapshots(),
-      builder: (context, snapshot) {
-        final unreadCount = snapshot.data?.docs.length ?? 0;
-
-        return InkWell(
-          onTap: () => context.pushNamed(AppRouter.notifications),
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Ionicons.notifications_outline, size: 24),
-              if (unreadCount > 0)
-                Positioned(
-                  right: -4,
-                  top: -4,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      unreadCount > 9 ? '9+' : '$unreadCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -699,6 +683,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+
+  Widget _buildNotificationButton(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('notifications')
+          .where('isRead', isEqualTo: false)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data?.docs.length ?? 0;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            InkWell(
+              onTap: () {
+                HapticsService.light();
+                context.pushNamed(AppRouter.notifications);
+              },
+              child: Icon(
+                Ionicons.notifications_outline,
+                color: context.onSurface.withValues(alpha: 0.7),
+                size: 26,
+              ),
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: 2,
+                top: 2,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: context.error,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: context.background, width: 2),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    unreadCount > 9 ? '9+' : unreadCount.toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

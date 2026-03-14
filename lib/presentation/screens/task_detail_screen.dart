@@ -14,6 +14,7 @@ import '../../core/utils/animations.dart';
 import '../../core/utils/haptics_service.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/entities.dart';
+import '../../core/utils/responsive_layout.dart';
 import '../../core/utils/font_helper.dart';
 import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
@@ -251,6 +252,143 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       (r) => r.type == RequestType.taskStatus,
     );
     final hasPendingRequest = pendingRequests.isNotEmpty;
+    final isLarge = ResponsiveLayout.isLargeScreen(context);
+
+    if (isLarge) {
+      return Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: SharedAppBar(
+          title: task.title,
+          titleStyle: FontHelper.getTextStyle(
+            task.title,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        body: Stack(
+          children: [
+            const ProjectDetailBackground(),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Left Column: Metadata & Priority
+                    Expanded(
+                      flex: 2,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            _buildHeader(
+                              context,
+                              task,
+                              user,
+                              projectId,
+                              hasPendingDeadlineRequest,
+                            ).animateEntrance(),
+                            if (task.isApproved) ...[
+                              const SizedBox(height: 24),
+                              _buildStatusControl(
+                                context,
+                                projectId,
+                                task,
+                                user,
+                              ).animateEntrance(delayMs: 300),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 32),
+                    // Center Column: Main Content
+                    Expanded(
+                      flex: 3,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDescription(context, task).animateEntrance(delayMs: 200),
+                            const SizedBox(height: 48),
+                            TaskTeamCard(
+                              task: task,
+                              users: users,
+                              currentUser: user,
+                              projectWorkerIds: project.workerIds,
+                              onWorkersUpdated: (newWorkerIds) {
+                                context.read<ProjectBloc>().add(
+                                  AssignWorkersToTask(
+                                    projectId: projectId,
+                                    taskId: task.id,
+                                    workerIds: newWorkerIds,
+                                  ),
+                                );
+                              },
+                            ).animateEntrance(delayMs: 250),
+                            const SizedBox(height: 32),
+                            _buildAttachments(context, attachments, users).animateEntrance(delayMs: 350),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 32),
+                    // Right Column: Activity Feed
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: _buildActivitySection(
+                              context,
+                              task,
+                              activities,
+                              user,
+                              users,
+                            ).animateEntrance(delayMs: 400),
+                          ),
+                          const SizedBox(height: 24),
+                          _buildCommentInput(
+                            context,
+                            projectId,
+                            task.id,
+                            user,
+                            controller,
+                            task.isApproved,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Floating Approval Footer handled via Positioned if needed, 
+            // but for desktop we can just put it in a proper place.
+            if (!task.isApproved &&
+                (user.role == UserRole.admin || user.role == UserRole.supervisor))
+              _buildApprovalFooter(
+                context,
+                projectId,
+                task.id,
+                title: LangKeys.approveTaskRequest.tr(),
+                onApprove: () => context.read<ProjectBloc>().add(
+                  ApproveTask(
+                    projectId: projectId,
+                    taskId: task.id,
+                    userId: user.id,
+                  ),
+                ),
+                onReject: () => context.read<ProjectBloc>().add(
+                  RejectTask(
+                    projectId: projectId,
+                    taskId: task.id,
+                    userId: user.id,
+                  ),
+                ),
+              ).animateScale(),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       extendBodyBehindAppBar: true,

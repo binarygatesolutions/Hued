@@ -29,6 +29,13 @@ class AppTheme {
         onBackground: AppColors.textPrimaryDark,
         error: AppColors.error,
       ),
+      hoverColor: AppColors.primary.withOpacity(0.08),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbColor: WidgetStateProperty.all(AppColors.primary.withOpacity(0.3)),
+        radius: const Radius.circular(10),
+        thickness: WidgetStateProperty.all(6),
+        thumbVisibility: WidgetStateProperty.all(true),
+      ),
       fontFamily: fontFamily,
       textTheme: TextTheme(
         displayLarge: AppTextStyles.getDisplayLarge(
@@ -103,6 +110,13 @@ class AppTheme {
         background: AppColors.backgroundLight,
         onBackground: AppColors.textPrimaryLight,
         error: AppColors.error,
+      ),
+      hoverColor: AppColors.primary.withOpacity(0.04),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbColor: WidgetStateProperty.all(AppColors.primary.withOpacity(0.2)),
+        radius: const Radius.circular(10),
+        thickness: WidgetStateProperty.all(6),
+        thumbVisibility: WidgetStateProperty.all(true),
       ),
       fontFamily: fontFamily,
       textTheme: TextTheme(

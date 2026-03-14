@@ -48,6 +48,7 @@ abstract class LangKeys {
   static const lightTheme = 'lightTheme';
   static const darkTheme = 'darkTheme';
   static const systemDefault = 'systemDefault';
+  static const collapse = 'collapse';
   static const selectLanguage = 'selectLanguage';
   static const newProject = 'newProject';
   static const managingOrganizationalProjects =

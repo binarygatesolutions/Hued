@@ -10,7 +10,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/localization/lang_keys.dart';
+import '../../core/utils/animations.dart';
 import '../../core/theme/theme_ext.dart';
+import '../../core/utils/responsive_layout.dart';
 import '../blocs/auth_bloc.dart';
 import '../blocs/auth_state.dart';
 import '../widgets/shared_app_bar.dart';
@@ -138,7 +140,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   }
 
   Widget _buildScaffold(BuildContext context, Authenticated state) {
-    final isMobile = MediaQuery.of(context).size.width < 600;
+    final isLarge = ResponsiveLayout.isLargeScreen(context);
 
     return Container(
       decoration: BoxDecoration(color: context.background),
@@ -158,7 +160,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 20 : 40,
+                  horizontal: !isLarge ? 20 : 60,
                   vertical: 32,
                 ),
                 child: Column(
@@ -166,11 +168,15 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   children: [
                     _buildDateFilter(context),
                     const SizedBox(height: 24),
-                    _buildPerformanceSection(context, isMobile),
+                    _buildPerformanceSection(
+                      context,
+                    ).animateEntrance(delayMs: 100),
                     const SizedBox(height: 32),
-                    _buildChartsSection(context, isMobile),
+                    _buildChartsSection(context).animateEntrance(delayMs: 300),
                     const SizedBox(height: 32),
-                    _buildInsightsSection(context),
+                    _buildInsightsSection(
+                      context,
+                    ).animateEntrance(delayMs: 500),
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -182,43 +188,35 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
-  Widget _buildPerformanceSection(BuildContext context, bool isMobile) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildPerformanceSection(BuildContext context) {
+    return Row(
       children: [
-        GridView.count(
-          crossAxisCount: isMobile ? 2 : 4,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          children: [
-            _buildMetricCard(
-              context,
-              LangKeys.taskStatusCompleted.tr(),
-              '$completed',
-              context.mintGreen,
-              Ionicons.checkmark_done_circle_outline,
-              0,
-            ),
-            _buildMetricCard(
-              context,
-              LangKeys.taskStatusInProgress.tr(),
-              '$inProgress',
-              context.primary,
-              Ionicons.sync_circle_outline,
-              1,
-            ),
+        _buildMetricCard(
+          context,
+          LangKeys.taskStatusCompleted.tr(),
+          '$completed',
+          context.mintGreen,
+          Ionicons.checkmark_done_circle_outline,
+          0,
+        ),
+        SizedBox(width: 10),
+        _buildMetricCard(
+          context,
+          LangKeys.taskStatusInProgress.tr(),
+          '$inProgress',
+          context.primary,
+          Ionicons.sync_circle_outline,
+          1,
+        ),
+        SizedBox(width: 10),
 
-            _buildMetricCard(
-              context,
-              LangKeys.taskStatusCancelled.tr(),
-              '$cancelled',
-              context.error,
-              Ionicons.close_circle_outline,
-              3,
-            ),
-          ],
+        _buildMetricCard(
+          context,
+          LangKeys.taskStatusCancelled.tr(),
+          '$cancelled',
+          context.error,
+          Ionicons.close_circle_outline,
+          3,
         ),
       ],
     );
@@ -310,47 +308,51 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     IconData icon,
     int index,
   ) {
-    return GlassContainer(
-          borderRadius: 32,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: color.withOpacity(0.2)),
+    return Expanded(
+      child:
+          GlassContainer(
+                borderRadius: 32,
+                width: 120,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: color.withOpacity(0.2)),
+                      ),
+                      child: Icon(icon, color: color, size: 24),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        color: context.onSurface,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      label.toUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: context.onSurface.withOpacity(0.4),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  color: context.onSurface,
-                  height: 1,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                label.toUpperCase(),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w800,
-                  color: context.onSurface.withOpacity(0.4),
-                ),
-              ),
-            ],
-          ),
-        )
-        .animate()
-        .fadeIn(delay: (index * 100).ms)
-        .scale(curve: Curves.easeOutBack, begin: const Offset(0.9, 0.9));
+              )
+              .animate()
+              .fadeIn(delay: (index * 100).ms)
+              .scale(curve: Curves.easeOutBack, begin: const Offset(0.9, 0.9)),
+    );
   }
 
   Widget _buildDateFilter(BuildContext context) {
@@ -407,13 +409,14 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     ).animate().fadeIn().slideX(begin: -0.1);
   }
 
-  Widget _buildChartsSection(BuildContext context, bool isMobile) {
+  Widget _buildChartsSection(BuildContext context) {
+    final isLarge = ResponsiveLayout.isLargeScreen(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle(context, LangKeys.visualAnalytics.tr()),
         const SizedBox(height: 16),
-        if (isMobile) ...[
+        if (!isLarge) ...[
           _buildStatusPieChart(context),
           const SizedBox(height: 24),
           _buildUserRolesBarChart(context),
