@@ -4,6 +4,7 @@ import 'project_state.dart';
 import '../../domain/entities/entities.dart';
 import '../../domain/repositories/project_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
+import 'helpers/approval_logic_helper.dart';
 
 class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   final ProjectRepository _projectRepository;
@@ -158,54 +159,27 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
           status == TaskStatus.completed || status == TaskStatus.cancelled;
 
       if (isRequestableStatus && role != UserRole.client) {
-        // Build Request
-        final List<String> requiredApproverIds = [];
-        ApprovalStep initialStep = ApprovalStep.pm;
-
-        // Fetch project for workerManagerMap/IDs
         final projects = await _projectRepository.getProjects();
         final project = projects.firstWhere((p) => p.id == event.projectId);
 
-        if (role == UserRole.worker) {
-          final managerId = project.workerManagerMap[event.userId];
-          if (managerId != null) {
-            requiredApproverIds.add(managerId);
-          } else {
-            // Fallback to PMs if no specific manager
-            requiredApproverIds.addAll(project.managerIds);
-          }
-          initialStep = ApprovalStep.pm;
-        } else if (role == UserRole.projectManager) {
-          requiredApproverIds.addAll(project.supervisorIds);
-          initialStep = ApprovalStep.supervisor;
-        } else if (role == UserRole.supervisor || role == UserRole.admin) {
-          requiredApproverIds.addAll(project.clientIds);
-          initialStep = ApprovalStep.client;
-        }
+        final request = ApprovalLogicHelper.generateRequest(
+          projectId: event.projectId,
+          taskId: event.taskId,
+          userId: event.userId,
+          role: role!,
+          type: RequestType.taskStatus,
+          targetValue: event.status,
+          project: project,
+        );
 
-        if (requiredApproverIds.isNotEmpty) {
-          final request = RequestEntity(
-            id: 'req_${DateTime.now().millisecondsSinceEpoch}',
-            projectId: event.projectId,
-            taskId: event.taskId,
-            initiatorId: event.userId,
-            initiatorRole: role!,
-            type: RequestType.taskStatus,
-            targetStatus: event.status,
-            currentStep: initialStep,
-            status: RequestStatus.pending,
-            requiredApproverIds: requiredApproverIds,
-            createdAt: DateTime.now(),
-          );
+        if (request != null) {
           await _projectRepository.createRequest(request);
-          emit(
-            ProjectInitial(
-              currentUserId: state.currentUserId,
-              currentUserRole: state.currentUserRole,
-              projects: state.projects,
-              pendingRequests: state.pendingRequests,
-            ),
-          );
+          emit(ProjectInitial(
+            currentUserId: state.currentUserId,
+            currentUserRole: state.currentUserRole,
+            projects: state.projects,
+            pendingRequests: state.pendingRequests,
+          ));
           return;
         }
       }
@@ -397,48 +371,24 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
 
         // ONLY require approval if the task is already approved
         if (task.isApproved) {
-          final List<String> requiredApproverIds = [];
-          ApprovalStep initialStep = ApprovalStep.pm;
+          final request = ApprovalLogicHelper.generateRequest(
+            projectId: event.projectId,
+            taskId: event.taskId,
+            userId: event.userId,
+            role: role!,
+            type: RequestType.taskDeadline,
+            targetValue: event.deadline.toIso8601String(),
+            project: project,
+          );
 
-          if (role == UserRole.worker) {
-            final managerId = project.workerManagerMap[event.userId];
-            if (managerId != null) {
-              requiredApproverIds.add(managerId);
-            } else {
-              requiredApproverIds.addAll(project.managerIds);
-            }
-            initialStep = ApprovalStep.pm;
-          } else if (role == UserRole.projectManager) {
-            requiredApproverIds.addAll(project.supervisorIds);
-            initialStep = ApprovalStep.supervisor;
-          } else if (role == UserRole.supervisor || role == UserRole.admin) {
-            requiredApproverIds.addAll(project.clientIds);
-            initialStep = ApprovalStep.client;
-          }
-
-          if (requiredApproverIds.isNotEmpty) {
-            final request = RequestEntity(
-              id: 'req_${DateTime.now().millisecondsSinceEpoch}',
-              projectId: event.projectId,
-              taskId: event.taskId,
-              initiatorId: event.userId,
-              initiatorRole: role!,
-              type: RequestType.taskDeadline,
-              targetStatus: event.deadline.toIso8601String(),
-              currentStep: initialStep,
-              status: RequestStatus.pending,
-              requiredApproverIds: requiredApproverIds,
-              createdAt: DateTime.now(),
-            );
+          if (request != null) {
             await _projectRepository.createRequest(request);
-            emit(
-              ProjectInitial(
-                currentUserId: state.currentUserId,
-                currentUserRole: state.currentUserRole,
-                projects: state.projects,
-                pendingRequests: state.pendingRequests,
-              ),
-            );
+            emit(ProjectInitial(
+              currentUserId: state.currentUserId,
+              currentUserRole: state.currentUserRole,
+              projects: state.projects,
+              pendingRequests: state.pendingRequests,
+            ));
             return;
           }
         }
@@ -622,44 +572,24 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
         final projects = await _projectRepository.getProjects();
         final project = projects.firstWhere((p) => p.id == event.projectId);
 
-        final List<String> requiredApproverIds = [];
-        ApprovalStep initialStep = ApprovalStep.supervisor;
+        final request = ApprovalLogicHelper.generateRequest(
+          projectId: event.projectId,
+          taskId: '', // No task for project status
+          userId: event.userId,
+          role: role!,
+          type: RequestType.projectStatus,
+          targetValue: event.status.name,
+          project: project,
+        );
 
-        if (role == UserRole.projectManager) {
-          requiredApproverIds.addAll(project.supervisorIds);
-          initialStep = ApprovalStep.supervisor;
-        } else if (role == UserRole.supervisor || role == UserRole.admin) {
-          requiredApproverIds.addAll(project.clientIds);
-          initialStep = ApprovalStep.client;
-        } else if (role == UserRole.worker) {
-          // Workers usually don't finish projects, but if they try:
-          final managerId = project.workerManagerMap[event.userId];
-          if (managerId != null) requiredApproverIds.add(managerId);
-          initialStep = ApprovalStep.pm;
-        }
-
-        if (requiredApproverIds.isNotEmpty) {
-          final request = RequestEntity(
-            id: 'req_${DateTime.now().millisecondsSinceEpoch}',
-            projectId: event.projectId,
-            initiatorId: event.userId,
-            initiatorRole: role!,
-            type: RequestType.projectStatus,
-            targetStatus: event.status.name,
-            currentStep: initialStep,
-            status: RequestStatus.pending,
-            requiredApproverIds: requiredApproverIds,
-            createdAt: DateTime.now(),
-          );
+        if (request != null) {
           await _projectRepository.createRequest(request);
-          emit(
-            ProjectInitial(
-              currentUserId: state.currentUserId,
-              currentUserRole: state.currentUserRole,
-              projects: state.projects,
-              pendingRequests: state.pendingRequests,
-            ),
-          );
+          emit(ProjectInitial(
+            currentUserId: state.currentUserId,
+            currentUserRole: state.currentUserRole,
+            projects: state.projects,
+            pendingRequests: state.pendingRequests,
+          ));
           return;
         }
       }
@@ -815,6 +745,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
     LoadPendingRequests event,
     Emitter<ProjectState> emit,
   ) {
+    emit(state.copyWith(isRequestsLoading: true));
     _projectRepository.getPendingRequestsStream(event.userId).listen((
       requests,
     ) {
@@ -823,7 +754,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   }
 
   void _onRequestsUpdated(RequestsUpdated event, Emitter<ProjectState> emit) {
-    emit(state.copyWith(pendingRequests: event.requests));
+    emit(state.copyWith(pendingRequests: event.requests, isRequestsLoading: false));
   }
 
   void _onUpdateRequestStatus(

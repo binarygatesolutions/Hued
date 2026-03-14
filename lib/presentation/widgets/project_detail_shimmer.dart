@@ -122,6 +122,33 @@ class ProjectTaskItemShimmer extends StatelessWidget {
   }
 }
 
+class ProjectTimelineShimmer extends StatelessWidget {
+  const ProjectTimelineShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _BaseShimmer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _shimmerBox(height: 24, width: 200),
+          const SizedBox(height: 16),
+          ...List.generate(3, (index) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                const CircleAvatar(radius: 12, backgroundColor: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: _shimmerBox(height: 40)),
+              ],
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
 class _BaseShimmer extends StatelessWidget {
   final Widget child;
   const _BaseShimmer({required this.child});

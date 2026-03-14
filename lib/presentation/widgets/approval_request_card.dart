@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:hued/core/utils/font_helper.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/localization/lang_keys.dart';
@@ -42,6 +44,14 @@ class ApprovalRequestCard extends StatelessWidget {
     return FutureBuilder<Map<String, dynamic>>(
       future: _fetchDetails(projectRepo, authRepo),
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return ApprovalRequestCardShimmer(
+            isCompact: isCompact,
+            width: width,
+            margin: margin,
+          );
+        }
         final details = snapshot.data;
         final initiator = details?['initiator'] as UserEntity?;
         final projectName = details?['projectName'] as String? ?? '...';
@@ -94,11 +104,14 @@ class ApprovalRequestCard extends StatelessWidget {
                         children: [
                           Text(
                             projectName.toUpperCase(),
-                            style: TextStyle(
-                              color: context.onSurface.withOpacity(0.4),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.2,
+                            style: FontHelper.getTextStyle(
+                              projectName.toUpperCase(),
+                              style: TextStyle(
+                                color: context.onSurface.withOpacity(0.4),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -106,11 +119,15 @@ class ApprovalRequestCard extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             taskName ?? LangKeys.projectStatus.tr(),
-                            style: TextStyle(
-                              color: context.onSurface,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
+                            style: FontHelper.getTextStyle(
+                              taskName ?? LangKeys.projectStatus.tr(),
+
+                              style: TextStyle(
+                                color: context.onSurface,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                              ),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -149,10 +166,13 @@ class ApprovalRequestCard extends StatelessWidget {
                           children: [
                             Text(
                               initiator?.name ?? request.initiatorId,
-                              style: TextStyle(
-                                color: context.onSurface,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                              style: FontHelper.getTextStyle(
+                                initiator?.name ?? request.initiatorId,
+                                style: TextStyle(
+                                  color: context.onSurface,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -456,11 +476,23 @@ class ApprovalRequestCard extends StatelessWidget {
                       taskName != null
                           ? '$projectName > $taskName'
                           : projectName,
+
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: context.onSurface.withOpacity(0.5),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                      style: FontHelper.getTextStyle(
+                        taskName != null
+                            ? '$projectName > $taskName'
+                            : projectName,
+
+                        style: FontHelper.getTextStyle(
+                          taskName != null
+                              ? '$projectName > $taskName'
+                              : projectName,
+                          style: TextStyle(
+                            color: context.onSurface.withOpacity(0.5),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -876,6 +908,84 @@ class ApprovalRequestCard extends StatelessWidget {
           fontWeight: FontWeight.w900,
           fontSize: 13,
           letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class ApprovalRequestCardShimmer extends StatelessWidget {
+  final bool isCompact;
+  final double? width;
+  final EdgeInsets? margin;
+
+  const ApprovalRequestCardShimmer({
+    super.key,
+    this.isCompact = false,
+    this.width = 320,
+    this.margin,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDark ? Colors.grey[700]! : Colors.grey[100]!;
+
+    return Shimmer.fromColors(
+      baseColor: baseColor.withOpacity(0.3),
+      highlightColor: highlightColor.withOpacity(0.3),
+      child: Container(
+        width: isCompact ? double.infinity : width,
+        margin: margin ?? (isCompact ? const EdgeInsets.only(bottom: 16) : const EdgeInsets.only(right: 16)),
+        child: PremiumCard(
+          borderRadius: 24,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(width: 60, height: 10, color: Colors.white),
+                        const SizedBox(height: 6),
+                        Container(width: 120, height: 16, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(child: Container(height: 36, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)))),
+                  const SizedBox(width: 12),
+                  Expanded(child: Container(height: 36, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)))),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

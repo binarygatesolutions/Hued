@@ -10,6 +10,7 @@ abstract class ProjectState extends Equatable {
   final dynamic lastDoc;
   final bool isInitialLoading;
   final bool isLoadingMore;
+  final bool isRequestsLoading;
 
   const ProjectState({
     this.currentUserId,
@@ -20,6 +21,7 @@ abstract class ProjectState extends Equatable {
     this.lastDoc,
     this.isInitialLoading = false,
     this.isLoadingMore = false,
+    this.isRequestsLoading = false,
   });
 
   ProjectState copyWith({
@@ -31,6 +33,7 @@ abstract class ProjectState extends Equatable {
     dynamic lastDoc,
     bool? isInitialLoading,
     bool? isLoadingMore,
+    bool? isRequestsLoading,
   }) {
     return ProjectStateInstance(
       currentUserId: currentUserId ?? this.currentUserId,
@@ -41,6 +44,7 @@ abstract class ProjectState extends Equatable {
       lastDoc: lastDoc ?? this.lastDoc,
       isInitialLoading: isInitialLoading ?? this.isInitialLoading,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      isRequestsLoading: isRequestsLoading ?? this.isRequestsLoading,
     );
   }
 
@@ -54,6 +58,7 @@ abstract class ProjectState extends Equatable {
     lastDoc,
     isInitialLoading,
     isLoadingMore,
+    isRequestsLoading,
   ];
 }
 
@@ -67,6 +72,7 @@ class ProjectStateInstance extends ProjectState {
     super.lastDoc,
     super.isInitialLoading,
     super.isLoadingMore,
+    super.isRequestsLoading,
   });
 }
 
@@ -80,6 +86,7 @@ class ProjectInitial extends ProjectState {
     super.lastDoc,
     super.isInitialLoading,
     super.isLoadingMore,
+    super.isRequestsLoading,
   });
 }
 
@@ -93,6 +100,7 @@ class ProjectLoading extends ProjectState {
     super.lastDoc,
     super.isInitialLoading,
     super.isLoadingMore,
+    super.isRequestsLoading,
   });
 }
 
@@ -108,6 +116,7 @@ class ProjectError extends ProjectState {
     super.lastDoc,
     super.isInitialLoading,
     super.isLoadingMore,
+    super.isRequestsLoading,
   });
 
   @override

@@ -5,7 +5,6 @@ import 'package:ionicons/ionicons.dart';
 import 'package:go_router/go_router.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/localization/lang_keys.dart';
-import '../../core/utils/animations.dart';
 import '../../core/utils/haptics_service.dart';
 import '../../core/theme/theme_ext.dart';
 import '../../domain/entities/entities.dart';
@@ -143,7 +142,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             ),
             builder: (context, projectSnapshot) {
               final currentProject = projectSnapshot.data ?? widget.project;
-              final isProjectLoading = projectSnapshot.connectionState == ConnectionState.waiting && !projectSnapshot.hasData;
+              final isProjectLoading =
+                  projectSnapshot.connectionState == ConnectionState.waiting &&
+                  !projectSnapshot.hasData;
 
               return StreamBuilder<List<TaskEntity>>(
                 stream: context.read<ProjectRepository>().getTasksStream(
@@ -162,8 +163,14 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                     ]),
                     builder: (context, usersSnapshot) {
                       final users = usersSnapshot.data ?? {};
-                      final isTasksLoading = tasksSnapshot.connectionState == ConnectionState.waiting && !tasksSnapshot.hasData;
-                      final isUsersLoading = usersSnapshot.connectionState == ConnectionState.waiting && !usersSnapshot.hasData;
+                      final isTasksLoading =
+                          tasksSnapshot.connectionState ==
+                              ConnectionState.waiting &&
+                          !tasksSnapshot.hasData;
+                      final isUsersLoading =
+                          usersSnapshot.connectionState ==
+                              ConnectionState.waiting &&
+                          !usersSnapshot.hasData;
 
                       return Scaffold(
                         extendBodyBehindAppBar: true,
@@ -195,7 +202,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ).animateScale(delayMs: 600)
+                              )
                             : null,
 
                         body: Stack(
@@ -212,7 +219,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                                 isTasksLoading: isTasksLoading,
                                 isUsersLoading: isUsersLoading,
                               ),
-                            ).animateEntrance(),
+                            ),
                           ],
                         ),
                       );
@@ -459,6 +466,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   }) {
     return BlocBuilder<ActivityBloc, ActivityState>(
       builder: (context, activityState) {
+        final isActivitiesLoading =
+            activityState is ActivityLoading ||
+            activityState is ActivityInitial;
         final activities = (activityState is ActivityLoaded)
             ? activityState.activities
             : <ActivityEntity>[];
@@ -467,178 +477,130 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         final isDesktop = ResponsiveLayout.isLargeScreen(context);
 
         if (isDesktop) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Left side: Project Info & Stats
-              Expanded(
-                flex: 2,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (isProjectLoading || isUsersLoading)
-                        const ProjectHeroShimmer()
-                      else
-                        ProjectHeroSection(
-                          project: currentProject,
-                          completedTasks: approvedTasks
-                              .where((t) => t.status == TaskStatus.completed)
-                              .length,
-                          totalApprovedTasks: approvedTasks.length,
-                          users: users,
-                        ).animateEntrance(delayMs: 0),
-                      const SizedBox(height: 32),
-                      if (isProjectLoading)
-                        const ProjectStatsShimmer()
-                      else
-                        ProjectStatsRow(
-                          totalTasks: _totalTasks,
-                          activeTasks: _activeTasks,
-                          doneTasks: _doneTasks,
-                          project: currentProject,
-                        ).animateEntrance(delayMs: 100),
-                      const SizedBox(height: 32),
-                      if (isProjectLoading || isUsersLoading)
-                        const ProjectStakeholderShimmer()
-                      else
-                        ProjectStakeholderCard(
-                          project: currentProject,
-                          users: users,
-                          currentUser: user,
-                        ).animateEntrance(delayMs: 200),
-                    ],
-                  ),
-                ),
-              ),
-              // Right side: Tasks and Timeline
-              Expanded(
-                flex: 3,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ProjectSectionHeader(
-                        title: LangKeys.tasks.tr().toUpperCase(),
-                        color: context.primary,
-                        icon: Ionicons.layers_outline,
-                        onViewAll: tasks.isEmpty || tasks.length < 10
-                            ? null
-                            : () => context.push(
-                                '/project/${currentProject.id}/tasks',
-                                extra: currentProject,
-                              ),
-                      ).animateEntrance(delayMs: 300),
-                      const SizedBox(height: 24),
-                      if (tasks.isEmpty)
-                        const EmptyTasksMessage()
-                      else
-                        ..._buildFilteredTasks(
-                          context,
-                          currentProject,
-                          tasks,
-                          users,
-                          user,
-                        ),
-                      const SizedBox(height: 48),
-                      SharedTimelineWidget(
-                        activities: activities,
-                        title: LangKeys.projectActivities.tr(),
-                        onViewAll: () => context.push(
-                          '/project/${currentProject.id}/timeline',
-                        ),
-                        color: context.primary,
-                        users: users,
-                      ).animateEntrance(delayMs: 500),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          return _buildDesktopLayout(
+            context,
+            user,
+            currentProject,
+            approvedTasks,
+            tasks,
+            activities,
+            users,
+            isProjectLoading: isProjectLoading,
+            isTasksLoading: isTasksLoading,
+            isUsersLoading: isUsersLoading,
+            isActivitiesLoading: isActivitiesLoading,
           );
         }
 
-        return SharedSmartRefresher(
-          controller: _refreshController,
-          enablePullUp: false,
-          onRefresh: _onRefresh,
-          onLoading: null,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      if (isProjectLoading || isUsersLoading)
-                        const ProjectHeroShimmer()
-                      else
-                        ProjectHeroSection(
-                          project: currentProject,
-                          completedTasks: approvedTasks
-                              .where((t) => t.status == TaskStatus.completed)
-                              .length,
-                          totalApprovedTasks: approvedTasks.length,
-                          users: users,
-                        ).animateEntrance(delayMs: 0),
-                      const SizedBox(height: 24),
-                      if (isProjectLoading)
-                        const ProjectStatsShimmer()
-                      else
-                        ProjectStatsRow(
-                          totalTasks: _totalTasks,
-                          activeTasks: _activeTasks,
-                          doneTasks: _doneTasks,
-                          project: currentProject,
-                        ).animateEntrance(delayMs: 100),
-                      const SizedBox(height: 32),
-                      if (isProjectLoading || isUsersLoading)
-                        const ProjectStakeholderShimmer()
-                      else
-                        ProjectStakeholderCard(
-                          project: currentProject,
-                          users: users,
-                          currentUser: user,
-                        ).animateEntrance(delayMs: 200),
-                      const SizedBox(height: 32),
-                      if (isTasksLoading)
-                        const ProjectHeaderShimmer()
-                      else
-                        ProjectSectionHeader(
-                          title: LangKeys.tasks.tr().toUpperCase(),
-                          color: context.primary,
-                          icon: Ionicons.layers_outline,
-                          onViewAll: tasks.isEmpty || tasks.length < 10
-                              ? null
-                              : () => context.push(
-                                  '/project/${currentProject.id}/tasks',
-                                  extra: currentProject,
-                                ),
-                        ).animateEntrance(delayMs: 300),
-                      const SizedBox(height: 24),
-                      if (isTasksLoading) ...[
-                        const ProjectTaskItemShimmer(),
-                        const SizedBox(height: 16),
-                        const ProjectTaskItemShimmer(),
-                        const SizedBox(height: 16),
-                        const ProjectTaskItemShimmer(),
-                      ] else if (tasks.isEmpty)
-                        const EmptyTasksMessage()
-                      else
-                        ..._buildFilteredTasks(
-                          context,
-                          currentProject,
-                          tasks,
-                          users,
-                          user,
+        return _buildMobileLayout(
+          context,
+          user,
+          currentProject,
+          approvedTasks,
+          tasks,
+          activities,
+          users,
+          isProjectLoading: isProjectLoading,
+          isTasksLoading: isTasksLoading,
+          isUsersLoading: isUsersLoading,
+          isActivitiesLoading: isActivitiesLoading,
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopLayout(
+    BuildContext context,
+    UserEntity user,
+    ProjectEntity currentProject,
+    List<TaskEntity> approvedTasks,
+    List<TaskEntity> tasks,
+    List<ActivityEntity> activities,
+    Map<String, UserEntity> users, {
+    required bool isProjectLoading,
+    required bool isTasksLoading,
+    required bool isUsersLoading,
+    required bool isActivitiesLoading,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left side: Project Info & Stats
+        Expanded(
+          flex: 2,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isProjectLoading || isUsersLoading)
+                  const ProjectHeroShimmer()
+                else
+                  ProjectHeroSection(
+                    project: currentProject,
+                    completedTasks: approvedTasks
+                        .where((t) => t.status == TaskStatus.completed)
+                        .length,
+                    totalApprovedTasks: approvedTasks.length,
+                    users: users,
+                  ),
+                const SizedBox(height: 32),
+                if (isProjectLoading)
+                  const ProjectStatsShimmer()
+                else
+                  ProjectStatsRow(
+                    totalTasks: _totalTasks,
+                    activeTasks: _activeTasks,
+                    doneTasks: _doneTasks,
+                    project: currentProject,
+                  ),
+                const SizedBox(height: 32),
+                if (isProjectLoading || isUsersLoading)
+                  const ProjectStakeholderShimmer()
+                else
+                  ProjectStakeholderCard(
+                    project: currentProject,
+                    users: users,
+                    currentUser: user,
+                  ),
+              ],
+            ),
+          ),
+        ),
+        // Right side: Tasks and Timeline
+        Expanded(
+          flex: 3,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ProjectSectionHeader(
+                  title: LangKeys.tasks.tr().toUpperCase(),
+                  color: context.primary,
+                  icon: Ionicons.layers_outline,
+                  onViewAll: tasks.isEmpty || tasks.length < 10
+                      ? null
+                      : () => context.push(
+                          '/project/${currentProject.id}/tasks',
+                          extra: currentProject,
                         ),
-                      const SizedBox(height: 22),
-                      SharedTimelineWidget(
+                ),
+                const SizedBox(height: 24),
+                if (tasks.isEmpty)
+                  const EmptyTasksMessage()
+                else
+                  ..._buildFilteredTasks(
+                    context,
+                    currentProject,
+                    tasks,
+                    users,
+                    user,
+                  ),
+                const SizedBox(height: 48),
+                isActivitiesLoading
+                    ? const ProjectTimelineShimmer()
+                    : SharedTimelineWidget(
                         activities: activities,
                         title: LangKeys.projectActivities.tr(),
                         onViewAll: () => context.push(
@@ -646,16 +608,124 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         ),
                         color: context.primary,
                         users: users,
-                      ).animateEntrance(delayMs: 500),
-                      const SizedBox(height: 100),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+                      ),
+              ],
+            ),
           ),
-        );
-      },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout(
+    BuildContext context,
+    UserEntity user,
+    ProjectEntity currentProject,
+    List<TaskEntity> approvedTasks,
+    List<TaskEntity> tasks,
+    List<ActivityEntity> activities,
+    Map<String, UserEntity> users, {
+    required bool isProjectLoading,
+    required bool isTasksLoading,
+    required bool isUsersLoading,
+    required bool isActivitiesLoading,
+  }) {
+    return SharedSmartRefresher(
+      controller: _refreshController,
+      enablePullUp: false,
+      onRefresh: _onRefresh,
+      onLoading: null,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  if (isProjectLoading || isUsersLoading)
+                    const ProjectHeroShimmer()
+                  else
+                    ProjectHeroSection(
+                      project: currentProject,
+                      completedTasks: approvedTasks
+                          .where((t) => t.status == TaskStatus.completed)
+                          .length,
+                      totalApprovedTasks: approvedTasks.length,
+                      users: users,
+                    ),
+                  const SizedBox(height: 24),
+                  if (isProjectLoading)
+                    const ProjectStatsShimmer()
+                  else
+                    ProjectStatsRow(
+                      totalTasks: _totalTasks,
+                      activeTasks: _activeTasks,
+                      doneTasks: _doneTasks,
+                      project: currentProject,
+                    ),
+                  const SizedBox(height: 32),
+                  if (isProjectLoading || isUsersLoading)
+                    const ProjectStakeholderShimmer()
+                  else
+                    ProjectStakeholderCard(
+                      project: currentProject,
+                      users: users,
+                      currentUser: user,
+                    ),
+                  const SizedBox(height: 32),
+                  if (isTasksLoading)
+                    const ProjectHeaderShimmer()
+                  else
+                    ProjectSectionHeader(
+                      title: LangKeys.tasks.tr().toUpperCase(),
+                      color: context.primary,
+                      icon: Ionicons.layers_outline,
+                      onViewAll: tasks.isEmpty || tasks.length < 10
+                          ? null
+                          : () => context.push(
+                              '/project/${currentProject.id}/tasks',
+                              extra: currentProject,
+                            ),
+                    ),
+                  const SizedBox(height: 24),
+                  if (isTasksLoading) ...[
+                    const ProjectTaskItemShimmer(),
+                    const SizedBox(height: 16),
+                    const ProjectTaskItemShimmer(),
+                    const SizedBox(height: 16),
+                    const ProjectTaskItemShimmer(),
+                  ] else if (tasks.isEmpty)
+                    const EmptyTasksMessage()
+                  else
+                    ..._buildFilteredTasks(
+                      context,
+                      currentProject,
+                      tasks,
+                      users,
+                      user,
+                    ),
+                  const SizedBox(height: 22),
+                  isActivitiesLoading
+                      ? const ProjectTimelineShimmer()
+                      : SharedTimelineWidget(
+                          activities: activities,
+                          title: LangKeys.projectActivities.tr(),
+                          onViewAll: () => context.push(
+                            '/project/${currentProject.id}/timeline',
+                          ),
+                          color: context.primary,
+                          users: users,
+                        ),
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

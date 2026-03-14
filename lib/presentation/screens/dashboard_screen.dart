@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
@@ -24,11 +23,11 @@ import '../widgets/premium_card.dart';
 import '../widgets/approval_request_card.dart';
 import '../widgets/shared_smart_refresher.dart';
 import 'package:pull_to_refresh_flutter3/pull_to_refresh_flutter3.dart';
-import 'package:hued/core/utils/animations.dart';
 import 'package:hued/core/utils/haptics_service.dart';
 import '../widgets/project_section_header.dart';
 import '../../core/utils/responsive_layout.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/dashboard_shimmer.dart';
 
 int _activeProjects = 0;
 int _finishedProjects = 0;
@@ -45,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final RefreshController _refreshController = RefreshController(
     initialRefresh: false,
   );
+  bool _isStatsLoading = false;
 
   @override
   void initState() {
@@ -90,6 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> getStatistics(UserEntity user) async {
+    setState(() => _isStatsLoading = true);
     final col = FirebaseFirestore.instance.collection('projects');
 
     Query<Map<String, dynamic>> base = col;
@@ -116,6 +117,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _finishedProjects = results[0].count ?? 0;
       _activeProjects = results[1].count ?? 0;
       _canceledProjects = results[2].count ?? 0;
+      _isStatsLoading = false;
     });
   }
 
@@ -170,7 +172,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ).animateScale(delayMs: 600)
+                    )
                   : null,
               body: _buildRoleSpecificContent(context, user),
             );
@@ -191,91 +193,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Stack(
         children: [
           // Multi-layered Mesh Gradient Blobs
-          if (isDark) ...[
-            Positioned(
-              top: -100,
-              right: -50,
-              child:
-                  Container(
-                        width: 350,
-                        height: 350,
-                        decoration: BoxDecoration(
-                          gradient: RadialGradient(
-                            colors: [
-                              context.primary.withOpacity(0.12),
-                              context.primary.withOpacity(0),
-                            ],
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                      )
-                      .animate()
-                      .fadeIn(duration: 1200.ms)
-                      .scale(
-                        begin: const Offset(0.8, 0.8),
-                        curve: Curves.easeOutCubic,
-                      ),
-            ),
-            Positioned(
-              top: 150,
-              left: -100,
-              child:
-                  Container(
-                        width: 450,
-                        height: 450,
-                        decoration: BoxDecoration(
-                          gradient: RadialGradient(
-                            colors: [
-                              context.purple.withOpacity(0.08),
-                              context.purple.withOpacity(0),
-                            ],
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                      )
-                      .animate()
-                      .fadeIn(duration: 1500.ms, delay: 200.ms)
-                      .scale(
-                        begin: const Offset(0.7, 0.7),
-                        curve: Curves.easeOutCubic,
-                      ),
-            ),
-            Positioned(
-              bottom: 100,
-              right: -150,
-              child:
-                  Container(
-                        width: 400,
-                        height: 400,
-                        decoration: BoxDecoration(
-                          gradient: RadialGradient(
-                            colors: [
-                              context.primary.withOpacity(0.06),
-                              context.primary.withOpacity(0),
-                            ],
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                      )
-                      .animate(
-                        onPlay: (controller) =>
-                            controller.repeat(reverse: true),
-                      )
-                      .moveY(
-                        begin: 0,
-                        end: 30,
-                        duration: 4.seconds,
-                        curve: Curves.easeInOut,
-                      ),
-            ),
-            // Glassmorphism Overlay
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-          ],
+          if (isDark) _buildDesktopBackground(context),
+
+          // Main Content
 
           // Main Content
           Positioned.fill(
@@ -331,17 +251,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   SliverToBoxAdapter(
-                    child: _buildPersonalizedHeader(context, user),
+                    child: BlocBuilder<ProjectBloc, ProjectState>(
+                      builder: (context, state) {
+                        if (state.isInitialLoading && state.projects.isEmpty) {
+                          return const DashboardHeaderShimmer();
+                        }
+                        return _buildPersonalizedHeader(context, user);
+                      },
+                    ),
                   ),
                   SliverToBoxAdapter(
                     child: BlocBuilder<ProjectBloc, ProjectState>(
                       builder: (context, state) => Column(
                         children: [
-                          _buildPendingApprovals(context, state),
-                          _buildQuickStats(context, state),
+                          state.isRequestsLoading
+                              ? const DashboardApprovalsShimmer()
+                              : _buildPendingApprovals(context, state),
+                          _isStatsLoading
+                              ? const DashboardStatsShimmer()
+                              : _buildQuickStats(context, state),
                         ],
                       ),
-                    ).animateEntrance(delayMs: 200),
+                    ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   SliverToBoxAdapter(child: _buildProjectHeader(context)),
@@ -379,12 +310,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     if (state.isInitialLoading && state.projects.isEmpty) {
-      return const SliverToBoxAdapter(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 48),
-          child: CustomLoading(),
-        ),
-      );
+      return const SliverToBoxAdapter(child: DashboardProjectGridShimmer());
     }
 
     if (!state.isInitialLoading && state.projects.isEmpty) {
@@ -416,7 +342,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               extra: project,
               pathParameters: {'id': project.id},
             ),
-          ).animateListStep(index: index);
+          );
         },
         childCount: state.projects.length + (state.hasMore ? 1 : 0),
       ),
@@ -433,7 +359,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: LangKeys.allProjects.tr(),
         color: context.primary,
         icon: Ionicons.grid_outline,
-      ).animateEntrance(delayMs: 500),
+      ),
     );
   }
 
@@ -457,22 +383,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         letterSpacing: -1,
                         fontSize: 32,
                       ),
-                    ).animate().fadeIn(duration: 600.ms).slideX(begin: -0.1),
+                    ),
                     const SizedBox(height: 6),
                     Text(
-                          user.role == UserRole.admin
-                              ? LangKeys.managingOrganizationalProjects.tr()
-                              : LangKeys.exploreProjectsTasks.tr(),
-                          style: TextStyle(
-                            color: context.onSurface.withOpacity(0.45),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: -0.2,
-                          ),
-                        )
-                        .animate()
-                        .fadeIn(duration: 600.ms, delay: 100.ms)
-                        .slideX(begin: -0.1),
+                      user.role == UserRole.admin
+                          ? LangKeys.managingOrganizationalProjects.tr()
+                          : LangKeys.exploreProjectsTasks.tr(),
+                      style: TextStyle(
+                        color: context.onSurface.withOpacity(0.45),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -488,7 +411,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     showBorder: true,
                   ),
                 ),
-              ).animate().fadeIn(duration: 600.ms, delay: 200.ms).scale(),
+              ),
             ],
           ),
         ],
@@ -574,50 +497,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
     int delayMs = 0,
   }) {
     return Expanded(
-          child: PremiumCard(
-            borderRadius: 32,
-            margin: EdgeInsets.symmetric(horizontal: 6),
-            padding: const EdgeInsets.all(16), // Reduced padding
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: color.withOpacity(0.15)),
-                  ),
-                  child: Icon(icon, size: 20, color: color),
-                ),
-                const SizedBox(height: 12), // Reduced spacing
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: context.onSurface,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 26,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 2), // Reduced spacing
-                Text(
-                  label.toUpperCase(),
-                  style: TextStyle(
-                    color: context.onSurface.withOpacity(0.4),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
+      child: PremiumCard(
+        borderRadius: 32,
+        margin: EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.all(16), // Reduced padding
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: color.withOpacity(0.15)),
+              ),
+              child: Icon(icon, size: 20, color: color),
             ),
-          ),
-        )
-        .animate()
-        .fadeIn(delay: delayMs.ms)
-        .scale(begin: const Offset(0.9, 0.9), curve: Curves.easeOutBack);
+            const SizedBox(height: 12), // Reduced spacing
+            Text(
+              value,
+              style: TextStyle(
+                color: context.onSurface,
+                fontWeight: FontWeight.w800,
+                fontSize: 26,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 2), // Reduced spacing
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                color: context.onSurface.withOpacity(0.4),
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -664,7 +584,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: ProjectSectionHeader(
               title: LangKeys.pendingApprovals.tr(),
               color: context.primary,
-            ).animateEntrance(delayMs: 500),
+            ),
           ),
           const SizedBox(height: 17),
           SingleChildScrollView(
@@ -741,6 +661,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildDesktopBackground(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          top: -100,
+          right: -50,
+          child: Container(
+            width: 350,
+            height: 350,
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                colors: [
+                  context.primary.withOpacity(0.12),
+                  context.primary.withOpacity(0),
+                ],
+              ),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        Positioned(
+          top: 150,
+          left: -100,
+          child: Container(
+            width: 450,
+            height: 450,
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                colors: [
+                  context.purple.withOpacity(0.08),
+                  context.purple.withOpacity(0),
+                ],
+              ),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 100,
+          right: -150,
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                colors: [
+                  context.primary.withOpacity(0.06),
+                  context.primary.withOpacity(0),
+                ],
+              ),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        // Glassmorphism Overlay
+        Positioned.fill(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+            child: Container(color: Colors.transparent),
+          ),
+        ),
+      ],
     );
   }
 }
