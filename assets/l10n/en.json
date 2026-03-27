@@ -267,7 +267,7 @@
     "owner": "Owner",
     "membersTotal": "{} members total",
     "workersCount": "{} workers",
-    "moreItems": "+{} more",
+    "moreItems": "{} more",
     "unassignedWorkers": "Unassigned Workers",
     "needsManager": "Needs Manager",
     "timelineStatus": "TIMELINE STATUS",
@@ -299,5 +299,18 @@
     "projectHealthOrientation": "Project Health Orientation",
     "taskStatusDistribution": "Task Status Distribution",
     "priorityIntensity": "Priority Intensity",
-    "confidentialProjectReport": "Confidential Project Report"
+    "confidentialProjectReport": "Confidential Project Report",
+    "deleteAccount": "Delete Account",
+    "deleteAccountSubtitle": "Permanently delete your account and data",
+    "deleteAccountConfirmTitle": "Delete Account?",
+    "deleteAccountConfirmMessage": "Are you sure you want to delete your account? This action cannot be undone.",
+    "deleteAccountWarning": "This action is irreversible and will delete all your data, including projects, tasks, and profile information.",
+    "enterPasswordToDelete": "Please enter your password to confirm deletion",
+    "passwordRequired": "Password is required",
+    "fillSpecialtyName": "Fill in the specialty name below",
+    "specialtyHint": "e.g. Civil Engineer, Designer...",
+    "noSpecialtiesAdded": "No Specialties Added",
+    "project": "Project",
+    "task": "Task",
+    "viewLess": "View Less"
 }

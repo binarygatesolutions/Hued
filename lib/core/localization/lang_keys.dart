@@ -318,4 +318,17 @@ abstract class LangKeys {
   static const priorityIntensity = 'priorityIntensity';
   static const confidentialProjectReport = 'confidentialProjectReport';
   static const leadingConsultancyFirm = 'leadingConsultancyFirm';
+  static const deleteAccount = 'deleteAccount';
+  static const deleteAccountSubtitle = 'deleteAccountSubtitle';
+  static const deleteAccountConfirmTitle = 'deleteAccountConfirmTitle';
+  static const deleteAccountConfirmMessage = 'deleteAccountConfirmMessage';
+  static const String deleteAccountWarning = 'deleteAccountWarning';
+  static const String enterPasswordToDelete = 'enterPasswordToDelete';
+  static const String passwordRequired = 'passwordRequired';
+  static const String fillSpecialtyName = 'fillSpecialtyName';
+  static const String specialtyHint = 'specialtyHint';
+  static const String noSpecialtiesAdded = 'noSpecialtiesAdded';
+  static const String project = 'project';
+  static const String task = 'task';
+  static const String viewLess = 'viewLess';
 }

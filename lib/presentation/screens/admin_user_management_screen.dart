@@ -151,9 +151,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                                   if (newRole == UserRole.worker &&
                                       selectedSpecialtyId == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
+                                      SnackBar(
                                         content: Text(
-                                          "Please select a specialty",
+                                          LangKeys.pleaseSelectSpecialty.tr(),
                                         ),
                                       ),
                                     );

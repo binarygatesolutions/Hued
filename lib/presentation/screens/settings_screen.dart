@@ -517,7 +517,7 @@ class SettingsScreen extends StatelessWidget {
       ),
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
       ),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 4),
@@ -525,7 +525,7 @@ class SettingsScreen extends StatelessWidget {
           subtitle,
           style: TextStyle(
             color: context.onSurface.withOpacity(0.45),
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w400,
           ),
         ),
@@ -574,7 +574,7 @@ class SettingsScreen extends StatelessWidget {
       ),
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
       ),
       trailing: Icon(
         Ionicons.open_outline,
@@ -612,7 +612,7 @@ class SettingsScreen extends StatelessWidget {
         title: Text(
           title,
           style: TextStyle(
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w500,
             fontSize: 15,
             color: color,
           ),
@@ -916,7 +916,7 @@ class SettingsScreen extends StatelessWidget {
         ),
         title: Text(
           LangKeys.signOut.tr(),
-          style: const TextStyle(fontWeight: FontWeight.w900),
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         content: Text(
           LangKeys.signOutConfirm.tr(),

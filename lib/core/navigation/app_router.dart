@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../presentation/blocs/auth_bloc.dart';
 import '../../presentation/blocs/auth_state.dart';
+import '../localization/lang_keys.dart';
 import '../../presentation/screens/login_screen.dart';
 import '../../presentation/screens/register_screen.dart';
 import '../../presentation/screens/forgot_password_screen.dart';
@@ -64,11 +66,10 @@ class AppRouter {
             state.uri.path == '/register' ||
             state.uri.path == '/forgot-password';
 
-        // 1. While determining auth status, stay on splash
+        // 1. While determining auth status, stay on splash or auth pages
         if (authState is AuthInitial || authState is AuthLoading) {
-          // If we are already on a non-auth, non-splash page, stay there (e.g., during profile updates)
-          if (!isSplash && !isAuthRoute) return null;
-          return isSplash ? null : '/splash';
+          if (isSplash || isAuthRoute) return null;
+          return null;
         }
 
         // 2. Not Authenticated
@@ -237,7 +238,7 @@ class AppRouter {
               name: 'project-timeline',
               builder: (context, state) {
                 final projectId = state.pathParameters['id']!;
-                return TimelineScreen(projectId: projectId, title: 'Project');
+                return TimelineScreen(projectId: projectId, title: LangKeys.project.tr());
               },
             ),
             GoRoute(
@@ -270,7 +271,7 @@ class AppRouter {
                     return TimelineScreen(
                       projectId: projectId,
                       taskId: taskId,
-                      title: 'Task',
+                      title: LangKeys.task.tr(),
                     );
                   },
                 ),

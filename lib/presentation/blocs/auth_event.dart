@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/entities.dart';
 
@@ -63,5 +62,8 @@ class ForgotPasswordRequested extends AuthEvent {
 }
 
 class LogoutRequested extends AuthEvent {}
-
+class DeleteAccountRequested extends AuthEvent {
+  final String password;
+  DeleteAccountRequested(this.password);
+}
 class CheckAuthStatus extends AuthEvent {}

@@ -18,5 +18,6 @@ abstract class AuthRepository {
   Future<List<UserEntity>> getUsers({required List<String> userIds});
   Future<List<SpecialtyEntity>> getSpecialties();
   Future<void> addSpecialty(String name);
+  Future<void> deleteAccount(String password);
   Stream<UserEntity?> get onAuthStateChanged;
 }

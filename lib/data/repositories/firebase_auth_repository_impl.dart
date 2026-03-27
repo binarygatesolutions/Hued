@@ -250,4 +250,96 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
 
     return UserEntity.fromJson(userJson);
   }
+  @override
+  Future<void> deleteAccount(String password) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null || user.email == null) return;
+
+    final userId = user.uid;
+
+    // 0. Re-authenticate
+    final credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: password,
+    );
+    await user.reauthenticateWithCredential(credential);
+
+    // 1. Find all projects where the user is assigned
+    final projectsSnapshot = await _firestore
+        .collection('projects')
+        .where('assignedUserIds', arrayContains: userId)
+        .get();
+
+    for (final projectDoc in projectsSnapshot.docs) {
+      final projectId = projectDoc.id;
+      final projectData = projectDoc.data();
+
+      // Update project document: remove from all ID lists
+      final updates = <String, dynamic>{
+        'assignedUserIds': FieldValue.arrayRemove([userId]),
+        'supervisorIds': FieldValue.arrayRemove([userId]),
+        'managerIds': FieldValue.arrayRemove([userId]),
+        'clientIds': FieldValue.arrayRemove([userId]),
+        'workerIds': FieldValue.arrayRemove([userId]),
+      };
+
+      // Handle workerManagerMap (it's a Map<String, String>)
+      final workerManagerMap =
+          projectData['workerManagerMap'] as Map<String, dynamic>?;
+      if (workerManagerMap != null) {
+        bool changed = false;
+        final newMap = Map<String, dynamic>.from(workerManagerMap);
+        
+        // Remove if user is a worker (key)
+        if (newMap.containsKey(userId)) {
+          newMap.remove(userId);
+          changed = true;
+        }
+        
+        // Remove if user is a manager (value)
+        newMap.removeWhere((key, value) => value == userId);
+        if (newMap.length != workerManagerMap.length) {
+          changed = true;
+        }
+
+        if (changed) {
+          updates['workerManagerMap'] = newMap;
+        }
+      }
+
+      await _firestore.collection('projects').doc(projectId).update(updates);
+
+      // Clean up tasks in this project
+      final tasksSnapshot = await _firestore
+          .collection('projects')
+          .doc(projectId)
+          .collection('tasks')
+          .where('assignedWorkerIds', arrayContains: userId)
+          .get();
+
+      for (final taskDoc in tasksSnapshot.docs) {
+        await taskDoc.reference.update({
+          'assignedWorkerIds': FieldValue.arrayRemove([userId]),
+        });
+      }
+    }
+
+    // 2. Clean up requests where user is a required approver
+    final requestsSnapshot = await _firestore
+        .collection('requests')
+        .where('requiredApproverIds', arrayContains: userId)
+        .get();
+
+    for (final requestDoc in requestsSnapshot.docs) {
+      await requestDoc.reference.update({
+        'requiredApproverIds': FieldValue.arrayRemove([userId]),
+      });
+    }
+
+    // 3. Delete user document from Firestore
+    await _firestore.collection('users').doc(userId).delete();
+
+    // 4. Delete Firebase Auth user
+    await user.delete();
+  }
 }

@@ -16,6 +16,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutRequested>(_onLogoutRequested);
     on<CheckAuthStatus>(_onCheckAuthStatus);
     on<UpdateProfile>(_onUpdateProfile);
+    on<DeleteAccountRequested>(_onDeleteAccountRequested);
   }
 
   void _onUpdateProfile(UpdateProfile event, Emitter<AuthState> emit) async {
@@ -105,6 +106,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (e) {
       emit(Unauthenticated());
+    }
+  }
+  void _onDeleteAccountRequested(
+    DeleteAccountRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      await _authRepository.deleteAccount(event.password);
+      emit(Unauthenticated());
+    } catch (e) {
+      emit(AuthError('Failed to delete account: ${e.toString()}'));
     }
   }
 }

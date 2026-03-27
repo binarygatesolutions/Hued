@@ -121,7 +121,7 @@ class _TaskTeamCardState extends State<TaskTeamCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _isExpanded ? 'View Less' : 'View All',
+                        _isExpanded ? LangKeys.viewLess.tr() : LangKeys.viewAll.tr(),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -266,7 +266,7 @@ class _TaskTeamCardState extends State<TaskTeamCard> {
                           borderRadius: BorderRadius.circular(100),
                         ),
                         child: Text(
-                          '+${task.assignedWorkerIds.length - 10} more',
+                          LangKeys.moreItems.tr(args: ['+${task.assignedWorkerIds.length - 10}']),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

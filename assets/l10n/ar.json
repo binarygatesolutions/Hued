@@ -267,7 +267,7 @@
     "owner": "المالك",
     "membersTotal": "إجمالي الأعضاء {}",
     "workersCount": "{} عمال",
-    "moreItems": "+{}",
+    "moreItems": "{} إضافي",
     "unassignedWorkers": "موظفين غير معينين لمدير",
     "needsManager": "يحتاج مدير",
     "timelineStatus": "حالة الجدول الزمني",
@@ -299,5 +299,18 @@
     "projectHealthOrientation": "توجه سلامة المشروع",
     "taskStatusDistribution": "توزيع حالة المهام",
     "priorityIntensity": "كثافة الأولويات",
-    "confidentialProjectReport": "تقرير مشروع سري"
+    "confidentialProjectReport": "تقرير مشروع سري",
+    "deleteAccount": "حذف الحساب",
+    "deleteAccountSubtitle": "حذف حسابك وبياناتك بشكل نهائي",
+    "deleteAccountConfirmTitle": "حذف الحساب؟",
+    "deleteAccountConfirmMessage": "هل أنت متأكد من رغبتك في حذف حسابك؟ لا يمكن التراجع عن هذا الإجراء.",
+    "deleteAccountWarning": "هذا الإجراء غير قابل للتراجع وسيؤدي إلى حذف جميع بياناتك، بما في ذلك المشاريع والمهام ومعلومات الملف الشخصي.",
+    "enterPasswordToDelete": "يرجى إدخال كلمة المرور لتأكيد الحذف",
+    "passwordRequired": "كلمة المرور مطلوبة",
+    "fillSpecialtyName": "أدخل اسم التخصص أدناه",
+    "specialtyHint": "مثال: مهندس مدني، مصمم...",
+    "noSpecialtiesAdded": "لم يتم إضافة تخصصات",
+    "project": "مشروع",
+    "task": "مهمة",
+    "viewLess": "عرض أقل"
 }

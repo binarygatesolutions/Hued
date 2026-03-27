@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -92,8 +91,10 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final width = constraints.maxWidth;
-                final horizontalPadding = width > 800 ? (width - 600) / 2 : 24.0;
-                
+                final horizontalPadding = width > 800
+                    ? (width - 600) / 2
+                    : 24.0;
+
                 return CustomScrollView(
                   physics: const BouncingScrollPhysics(),
                   slivers: [
@@ -110,40 +111,47 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                               _buildAvatarSection(),
                               const SizedBox(height: 48),
                               GlassContainer(
-                                padding: const EdgeInsets.all(32),
-                                opacity: 0.6,
-                                borderRadius: 32,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildPremiumTextField(
-                                      context,
-                                      controller: _nameController,
-                                      hint: LangKeys.enterYourName.tr(),
-                                      label: LangKeys.fullName.tr(),
-                                      icon: Ionicons.person_outline,
-                                      validator: (v) => v?.isEmpty ?? true
-                                          ? LangKeys.nameRequired.tr()
-                                          : null,
+                                    padding: const EdgeInsets.all(32),
+                                    opacity: 0.6,
+                                    borderRadius: 32,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _buildPremiumTextField(
+                                          context,
+                                          controller: _nameController,
+                                          hint: LangKeys.enterYourName.tr(),
+                                          label: LangKeys.fullName.tr(),
+                                          icon: Ionicons.person_outline,
+                                          validator: (v) => v?.isEmpty ?? true
+                                              ? LangKeys.nameRequired.tr()
+                                              : null,
+                                        ),
+                                        const SizedBox(height: 24),
+                                        _buildPremiumTextField(
+                                          context,
+                                          controller: _emailController,
+                                          hint: LangKeys.enterYourEmail.tr(),
+                                          label: LangKeys.emailAddress.tr(),
+                                          readOnly: true,
+                                          icon: Ionicons.mail_outline,
+                                          keyboardType:
+                                              TextInputType.emailAddress,
+                                          validator: (v) => v?.isEmpty ?? true
+                                              ? LangKeys.emailRequired.tr()
+                                              : null,
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 24),
-                                    _buildPremiumTextField(
-                                      context,
-                                      controller: _emailController,
-                                      hint: LangKeys.enterYourEmail.tr(),
-                                      label: LangKeys.emailAddress.tr(),
-                                      readOnly: true,
-                                      icon: Ionicons.mail_outline,
-                                      keyboardType: TextInputType.emailAddress,
-                                      validator: (v) => v?.isEmpty ?? true
-                                          ? LangKeys.emailRequired.tr()
-                                          : null,
-                                    ),
-                                  ],
-                                ),
-                              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.05),
+                                  )
+                                  .animate()
+                                  .fadeIn(delay: 200.ms)
+                                  .slideY(begin: 0.05),
                               const SizedBox(height: 48),
                               _buildSaveButton(context),
+                              const SizedBox(height: 24),
+                              _buildDeleteAccountButton(context),
                               const SizedBox(height: 80),
                             ],
                           ),
@@ -237,6 +245,115 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
           isLoading: state is AuthUpdatingProfile,
         ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.05);
       },
+    );
+  }
+
+  Widget _buildDeleteAccountButton(BuildContext context) {
+    return Center(
+      child: TextButton.icon(
+        onPressed: () => _showDeleteAccountConfirmation(context),
+        icon: const Icon(Ionicons.trash_outline, color: Colors.grey, size: 16),
+        label: Text(
+          LangKeys.deleteAccount.tr(),
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 13,
+            decoration: TextDecoration.underline,
+          ),
+        ),
+      ).animate().fadeIn(delay: 600.ms),
+    );
+  }
+
+  void _showDeleteAccountConfirmation(BuildContext context) {
+    final passwordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: context.surface,
+        title: Text(
+          LangKeys.deleteAccountConfirmTitle.tr(),
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(LangKeys.deleteAccountConfirmMessage.tr()),
+              const SizedBox(height: 16),
+              SharedTextField(
+                controller: passwordController,
+                label: LangKeys.passwordLabel.tr(),
+                hint: LangKeys.enterPasswordToDelete.tr(),
+                icon: Ionicons.lock_closed_outline,
+                isPassword: true,
+                validator: (v) =>
+                    v?.isEmpty ?? true ? LangKeys.passwordRequired.tr() : null,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: context.error.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: context.error.withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Ionicons.warning_outline,
+                      color: context.error,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        LangKeys.deleteAccountWarning.tr(),
+                        style: TextStyle(
+                          color: context.error,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: Text(
+              LangKeys.cancel.tr(),
+              style: TextStyle(color: context.onSurface.withOpacity(0.5)),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final password = passwordController.text;
+                Navigator.pop(context);
+                context.read<AuthBloc>().add(DeleteAccountRequested(password));
+              }
+            },
+            child: Text(
+              LangKeys.confirm.tr(),
+              style: TextStyle(
+                color: context.error,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

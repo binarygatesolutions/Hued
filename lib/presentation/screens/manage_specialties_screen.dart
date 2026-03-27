@@ -119,7 +119,7 @@ class _ManageSpecialtiesScreenState extends State<ManageSpecialtiesScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      "Fill in the specialty name below",
+                      LangKeys.fillSpecialtyName.tr(),
                       style: TextStyle(
                         fontSize: 12,
                         color: context.onSurface.withOpacity(0.4),
@@ -139,7 +139,7 @@ class _ManageSpecialtiesScreenState extends State<ManageSpecialtiesScreen> {
               fontWeight: FontWeight.w600,
             ),
             decoration: InputDecoration(
-              hintText: "e.g. Civil Engineer, Designer...",
+              hintText: LangKeys.specialtyHint.tr(),
               hintStyle: TextStyle(
                 color: context.onSurface.withOpacity(0.3),
                 fontWeight: FontWeight.normal,
@@ -280,7 +280,7 @@ class _ManageSpecialtiesScreenState extends State<ManageSpecialtiesScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "No Specialties Added",
+                    LangKeys.noSpecialtiesAdded.tr(),
                     style: TextStyle(
                       color: context.onSurface.withOpacity(0.4),
                       fontSize: 16,
