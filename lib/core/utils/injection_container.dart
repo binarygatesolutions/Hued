@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get_it/get_it.dart';
@@ -22,14 +24,32 @@ Future<void> initDependencies() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
+    if (Platform.isWindows || Platform.isMacOS) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: "AIzaSyD8TKvwV7Ism38OrEyileVhsgxHz7n6QeY",
+          authDomain: "hued-6877d.firebaseapp.com",
+          projectId: "hued-6877d",
+          storageBucket: "hued-6877d.firebasestorage.app",
+          messagingSenderId: "469656845570",
+          appId: "1:469656845570:web:d0834de2898cb245d9961b",
+          measurementId: "G-C2ZWMCTH3Y",
+        ),
+      );
+    } else {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+    debugPrint(
+      'Firebase initialized successfully for ${DefaultFirebaseOptions.currentPlatform.projectId}',
     );
-    debugPrint('Firebase initialized successfully for ${DefaultFirebaseOptions.currentPlatform.projectId}');
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
     if (e.toString().contains('no-app')) {
-      debugPrint('Specific Error: Core Firebase app not found or could not be initialized.');
+      debugPrint(
+        'Specific Error: Core Firebase app not found or could not be initialized.',
+      );
     }
   }
 
