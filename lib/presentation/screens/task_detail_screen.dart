@@ -1168,7 +1168,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   ? context.primary
                   : context.onSurface.withOpacity(0.05);
               return Expanded(
-                child: GestureDetector(
+                child: InkWell(
                   onTap: () {
                     if (task.status == TaskStatus.completed) return;
                     if (status == TaskStatus.cancelled) return;
@@ -1182,6 +1182,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       ),
                     );
                   },
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     padding: const EdgeInsets.symmetric(vertical: 12),

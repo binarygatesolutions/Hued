@@ -89,6 +89,9 @@ class AppTheme {
         true,
       ),
       elevatedButtonTheme: _elevatedButtonTheme(),
+      textButtonTheme: _textButtonTheme(),
+      outlinedButtonTheme: _outlinedButtonTheme(),
+      iconButtonTheme: _iconButtonTheme(),
     );
   }
 
@@ -172,6 +175,9 @@ class AppTheme {
         false,
       ),
       elevatedButtonTheme: _elevatedButtonTheme(),
+      textButtonTheme: _textButtonTheme(),
+      outlinedButtonTheme: _outlinedButtonTheme(),
+      iconButtonTheme: _iconButtonTheme(),
     );
   }
 
@@ -223,6 +229,35 @@ class AppTheme {
         shadowColor: AppColors.primary.withOpacity(0.4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+        enabledMouseCursor: SystemMouseCursors.click,
+        disabledMouseCursor: SystemMouseCursors.basic,
+      ),
+    );
+  }
+
+  static TextButtonThemeData _textButtonTheme() {
+    return TextButtonThemeData(
+      style: TextButton.styleFrom(
+        enabledMouseCursor: SystemMouseCursors.click,
+        disabledMouseCursor: SystemMouseCursors.basic,
+      ),
+    );
+  }
+
+  static OutlinedButtonThemeData _outlinedButtonTheme() {
+    return OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        enabledMouseCursor: SystemMouseCursors.click,
+        disabledMouseCursor: SystemMouseCursors.basic,
+      ),
+    );
+  }
+
+  static IconButtonThemeData _iconButtonTheme() {
+    return IconButtonThemeData(
+      style: IconButton.styleFrom(
+        enabledMouseCursor: SystemMouseCursors.click,
+        disabledMouseCursor: SystemMouseCursors.basic,
       ),
     );
   }

@@ -44,8 +44,9 @@ class AttachmentChip extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            GestureDetector(
+            InkWell(
               onTap: onDelete,
+              borderRadius: BorderRadius.circular(100),
               child: Icon(
                 Ionicons.close_circle_outline,
                 size: 16,

@@ -72,4 +72,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'hued-6877d.firebasestorage.app',
     measurementId: 'G-C2ZWMCTH3Y',
   );
+
 }

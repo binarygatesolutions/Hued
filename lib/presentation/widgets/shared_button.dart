@@ -44,6 +44,7 @@ class SharedButton extends StatelessWidget {
     Widget button = ElevatedButton(
       onPressed: isLoading || disabled ? null : onPressed,
       style: ElevatedButton.styleFrom(
+        enabledMouseCursor: SystemMouseCursors.click,
         backgroundColor: showShadow ? Colors.transparent : bgColor,
         shadowColor: showShadow
             ? Colors.transparent

@@ -326,8 +326,9 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
               showShadow: false,
               child: Row(
                 children: [
-                  GestureDetector(
+                  InkWell(
                     onTap: () => UserProfileSheet.show(context, user),
+                    borderRadius: BorderRadius.circular(100),
                     child: SharedProfileAvatar(
                       name: user.name,
                       radius: 10,
@@ -419,8 +420,9 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
             ),
           ),
           child: ListTile(
-            leading: GestureDetector(
+            leading: InkWell(
               onTap: () => UserProfileSheet.show(context, user),
+              borderRadius: BorderRadius.circular(100),
               child: SharedProfileAvatar(
                 name: user.name,
                 radius: 18,
@@ -525,8 +527,9 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
                   ),
               ],
             ),
-            GestureDetector(
+            InkWell(
               onTap: _showSearchModal,
+              borderRadius: BorderRadius.circular(10),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -556,8 +559,9 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
         ),
         const SizedBox(height: 12),
         if (_selectedIds.isEmpty)
-          GestureDetector(
+          InkWell(
             onTap: _showSearchModal,
+            borderRadius: BorderRadius.circular(16),
             child: GlassContainer(
               padding: const EdgeInsets.all(20),
               borderRadius: 16,
@@ -612,8 +616,9 @@ class _MultiEmailSearchPickerState extends State<MultiEmailSearchPicker> {
                     showShadow: false,
                     child: Row(
                       children: [
-                        GestureDetector(
+                        InkWell(
                           onTap: () => UserProfileSheet.show(context, user),
+                          borderRadius: BorderRadius.circular(100),
                           child: SharedProfileAvatar(
                             name: user.name,
                             radius: 16,

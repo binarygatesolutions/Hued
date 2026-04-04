@@ -131,10 +131,11 @@ class ActivityTimelineTile extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
-          child: GestureDetector(
+          child: InkWell(
             onTap: user != null && activity.type == ActivityType.comment
                 ? () => UserProfileSheet.show(context, user)
                 : null,
+            borderRadius: BorderRadius.circular(4),
             child: Text(
               title,
               style: FontHelper.getTextStyle(

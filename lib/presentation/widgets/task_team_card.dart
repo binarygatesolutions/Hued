@@ -228,7 +228,7 @@ class _TaskTeamCardState extends State<TaskTeamCard> {
                               ),
                               if (canManage) ...[
                                 const SizedBox(width: 4),
-                                GestureDetector(
+                                InkWell(
                                   onTap: () async {
                                     final confirmed =
                                         await _showConfirmationDialog(
@@ -242,6 +242,7 @@ class _TaskTeamCardState extends State<TaskTeamCard> {
                                       widget.onWorkersUpdated?.call(newList);
                                     }
                                   },
+                                  borderRadius: BorderRadius.circular(100),
                                   child: Icon(
                                     Ionicons.close_circle,
                                     size: 14,

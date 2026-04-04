@@ -24,7 +24,7 @@ void main() async {
   await initDependencies();
   await sl<NotificationService>().init();
 
-  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+  if (Platform.isWindows || Platform.isMacOS) {
     await windowManager.ensureInitialized();
     WindowOptions windowOptions = const WindowOptions(
       size: Size(1280, 800),

@@ -25,8 +25,12 @@ Future<void> initDependencies() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    debugPrint('Firebase initialized successfully for ${DefaultFirebaseOptions.currentPlatform.projectId}');
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
+    if (e.toString().contains('no-app')) {
+      debugPrint('Specific Error: Core Firebase app not found or could not be initialized.');
+    }
   }
 
   // Repositories

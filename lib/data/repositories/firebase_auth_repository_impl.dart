@@ -32,18 +32,21 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
         email: email.trim(),
         password: password.trim(),
       );
+
       try {
+        String? token;
+        if (!Platform.isWindows) {
+          token = await FirebaseMessaging.instance.getToken();
+        }
         await _firestore.collection('users').doc(credential.user!.uid).update({
-          'fcmToken': await FirebaseMessaging.instance.getToken(),
+          'fcmToken': token,
         });
       } catch (e) {
-        debugPrint('Failed to update FCM token during login: $e');
+        debugPrint('Failed to update user profile during login: $e');
       }
       return await _getUserWithRole(credential.user!);
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
     } catch (e) {
-      throw 'An unexpected error occurred during login.';
+      throw _handleAuthException(e);
     }
   }
 
@@ -65,10 +68,12 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
       await credential.user!.updateDisplayName(name);
 
       String? fcmToken;
-      try {
-        fcmToken = await FirebaseMessaging.instance.getToken();
-      } catch (e) {
-        debugPrint('Failed to get FCM token during registration: $e');
+      if (!Platform.isWindows) {
+        try {
+          fcmToken = await FirebaseMessaging.instance.getToken();
+        } catch (e) {
+          debugPrint('Failed to get FCM token during registration: $e');
+        }
       }
 
       await _firestore.collection('users').doc(credential.user!.uid).set({
@@ -90,10 +95,8 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
         specialtyId: specialtyId,
         specialtyName: specialtyName,
       );
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
     } catch (e) {
-      throw 'An unexpected error occurred during registration.';
+      throw _handleAuthException(e);
     }
   }
 
@@ -104,10 +107,8 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
     } catch (e) {
-      throw 'An unexpected error occurred while sending the reset email.';
+      throw _handleAuthException(e);
     }
   }
 
@@ -188,26 +189,53 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
     await _firestore.collection('specialties').add({'name': name});
   }
 
-  String _handleAuthException(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'user-not-found':
-        return 'No user found with this email.';
-      case 'wrong-password':
-        return 'Incorrect password. Please try again.';
-      case 'email-already-in-use':
-        return 'This email is already registered.';
-      case 'invalid-email':
-        return 'Please enter a valid email address.';
-      case 'weak-password':
-        return 'The password is too weak.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
-      case 'too-many-requests':
-        return 'Too many failed attempts. Please try again later.';
-      case 'network-request-failed':
-        return 'Network error. Please check your connection.';
-      default:
-        return e.message ?? 'Authentication failed. Please try again.';
+  String _handleAuthException(dynamic e) {
+    if (e is FirebaseAuthException) {
+      debugPrint('FirebaseAuthException observed:');
+      debugPrint('  - Code: ${e.code}');
+      debugPrint('  - Message: ${e.message}');
+      debugPrint('  - Details: ${e.credential}');
+      debugPrint('  - Email: ${e.email}');
+      debugPrint('  - StackTrace: ${StackTrace.current}');
+
+      switch (e.code) {
+        case 'user-not-found':
+          return 'No user found with this email.';
+        case 'wrong-password':
+          return 'Incorrect password. Please try again.';
+        case 'email-already-in-use':
+          return 'This email is already registered.';
+        case 'invalid-email':
+          return 'Please enter a valid email address.';
+        case 'weak-password':
+          return 'The password is too weak.';
+        case 'user-disabled':
+          return 'This account has been disabled.';
+        case 'too-many-requests':
+          return 'Too many failed attempts. Please try again later.';
+        case 'network-request-failed':
+          return 'Network error. Please check your connection.';
+        case 'unknown':
+        case 'unknown-error':
+        case 'internal-error':
+          if (Platform.isWindows) {
+            return 'Authentication failed: [Native Internal Error] This usually means your Windows application configuration needs attention:\n\n'
+                '1. Ensure "Identity Toolkit API" is enabled in Google Cloud Console.\n'
+                '2. Ensure your API Key is not restricted OR allows Windows requests.\n'
+                '3. Check if a local firewall is blocking the app.\n\n'
+                'Details: ${e.message}';
+          }
+          return 'An internal error occurred. Please try again later.';
+        default:
+          final message =
+              e.message ?? 'Authentication failed. Please try again.';
+          return '[${e.code}] $message';
+      }
+    } else {
+      debugPrint('Unexpected Non-Firebase Error during Auth: $e');
+      debugPrint('  - Type: ${e.runtimeType}');
+      debugPrint('  - StackTrace: ${StackTrace.current}');
+      return 'An unexpected system error occurred: ${e.toString()}';
     }
   }
 
@@ -250,6 +278,7 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
 
     return UserEntity.fromJson(userJson);
   }
+
   @override
   Future<void> deleteAccount(String password) async {
     final user = _firebaseAuth.currentUser;
@@ -289,13 +318,13 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
       if (workerManagerMap != null) {
         bool changed = false;
         final newMap = Map<String, dynamic>.from(workerManagerMap);
-        
+
         // Remove if user is a worker (key)
         if (newMap.containsKey(userId)) {
           newMap.remove(userId);
           changed = true;
         }
-        
+
         // Remove if user is a manager (value)
         newMap.removeWhere((key, value) => value == userId);
         if (newMap.length != workerManagerMap.length) {
